@@ -1,0 +1,114 @@
+# Default values for certbot-server.
+# Sensitive values (domain, email, DNS provider credentials) are intentionally
+# left empty here. Provide them at install/upgrade time via --set or a private
+# values file passed with -f.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/lsflk/silver-certbot
+  tag: main
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+# ---------------------------------------------------------------------------
+# Let's Encrypt configuration.
+# These are intentionally empty. Supply them at upgrade time, e.g.:
+#   helm upgrade --install certbot-server ./mail-infra/helm/certbot-server \
+#     --set letsencrypt.email=admin@example.com \
+#     --set letsencrypt.domain=mail.example.com \
+#     --set letsencrypt.staging=false
+# ---------------------------------------------------------------------------
+letsencrypt:
+  # Primary domain to request a certificate for. REQUIRED.
+  domain: ""
+  # Additional SANs (comma-separated string), e.g. "smtp.example.com,imap.example.com"
+  additionalDomains: ""
+  # Email address used for ACME registration and expiry notices. REQUIRED.
+  email: ""
+  # Use Let's Encrypt staging endpoint (recommended while testing).
+  staging: false
+  # Auto-agree to the Let's Encrypt subscriber agreement.
+  agreeTos: true
+
+# Extra environment variables exposed to the container (non-sensitive).
+extraEnv: []
+# - name: SOME_FLAG
+#   value: "true"
+
+# Optional reference to an externally managed Secret containing sensitive
+# env vars (e.g. DNS provider API tokens). If set, all keys from this Secret
+# are injected as environment variables via envFrom.
+existingSecret: ""
+
+# When existingSecret is empty and any of the keys below are set, the chart
+# will create a Secret named <release>-certbot-server with those values.
+# Leave these empty when invoking `helm template` / `helm install` from a
+# repository and pass them via `--set secret.<key>=...` at upgrade time.
+secret:
+  # Example: DNS-01 challenge credentials. Add only what your deployment needs.
+  # cloudflareApiToken: ""
+  # route53AccessKeyId: ""
+  # route53SecretAccessKey: ""
+
+service:
+  type: ClusterIP
+  httpPort: 80
+  httpsPort: 443
+  # For HTTP-01 challenges over the public internet the service typically needs
+  # to be reachable externally. Switch to LoadBalancer (or use an Ingress) when
+  # you want Let's Encrypt to reach :80 directly.
+  # type: LoadBalancer
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: ""
+      paths:
+        - path: /.well-known/acme-challenge
+          pathType: Prefix
+  tls: []
+
+persistence:
+  # Certificates and account data must survive pod restarts; keep this enabled
+  # unless you mount them from an external source.
+  enabled: true
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  etc:
+    # Mounts at /etc/letsencrypt (account keys, live/ symlinks, archive/).
+    size: 1Gi
+  lib:
+    # Mounts at /var/lib/letsencrypt (work dir).
+    size: 512Mi
+  log:
+    # Mounts at /var/log/letsencrypt.
+    size: 512Mi
+
+resources: {}
+  # limits:
+  #   cpu: 200m
+  #   memory: 256Mi
+  # requests:
+  #   cpu: 50m
+  #   memory: 64Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+podAnnotations: {}
+podSecurityContext: {}
+securityContext: {}
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""

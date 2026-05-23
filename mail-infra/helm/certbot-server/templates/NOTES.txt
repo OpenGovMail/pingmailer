@@ -1,0 +1,28 @@
+certbot-server has been deployed.
+
+Release:   {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+Domain:    {{ .Values.letsencrypt.domain | default "(unset — supply with --set letsencrypt.domain=...)" }}
+Staging:   {{ .Values.letsencrypt.staging }}
+
+Service: {{ include "certbot-server.fullname" . }}
+  HTTP:  {{ .Values.service.httpPort }}
+  HTTPS: {{ .Values.service.httpsPort }}
+
+To check status:
+  kubectl --namespace {{ .Release.Namespace }} get deploy,svc,pvc -l app.kubernetes.io/instance={{ .Release.Name }}
+
+To tail logs:
+  kubectl --namespace {{ .Release.Namespace }} logs -f deploy/{{ include "certbot-server.fullname" . }}
+
+To upgrade with new sensitive values (NOT stored in values.yaml):
+  helm upgrade --install {{ .Release.Name }} ./mail-infra/helm/certbot-server \
+    --namespace {{ .Release.Namespace }} \
+    --set letsencrypt.domain=mail.example.com \
+    --set letsencrypt.email=admin@example.com \
+    --set letsencrypt.staging=false
+
+Persistent volumes provisioned (when persistence.enabled=true):
+  - {{ include "certbot-server.fullname" . }}-etc   -> /etc/letsencrypt
+  - {{ include "certbot-server.fullname" . }}-lib   -> /var/lib/letsencrypt
+  - {{ include "certbot-server.fullname" . }}-log   -> /var/log/letsencrypt

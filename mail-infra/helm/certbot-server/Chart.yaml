@@ -1,0 +1,17 @@
+apiVersion: v2
+name: certbot-server
+description: Helm chart for the Silver certbot-server that manages Let's Encrypt certificates for the Pingmailer stack
+type: application
+version: 0.1.0
+appVersion: "main"
+keywords:
+  - certbot
+  - letsencrypt
+  - tls
+  - certificates
+  - pingmailer
+maintainers:
+  - name: LSFLK
+    url: https://github.com/lsflk
+sources:
+  - https://github.com/lsflk/silver-certbot
