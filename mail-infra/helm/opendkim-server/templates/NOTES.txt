@@ -1,0 +1,43 @@
+silver-opendkim has been installed.
+
+Release:   {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+Service:   {{ include "silver-opendkim.fullname" . }}:{{ .Values.service.port }} (Milter)
+
+Domains configured:
+{{- range .Values.domains }}
+  • {{ .domain }} (selector={{ default "mail" .selector }}, keySize={{ default 2048 .keySize }})
+{{- end }}
+
+----- 1. Watch first-time key generation -----
+
+  kubectl -n {{ .Release.Namespace }} logs -f deploy/{{ include "silver-opendkim.fullname" . }}
+
+The pod prints DKIM DNS TXT records on first start. Capture them with:
+
+  kubectl -n {{ .Release.Namespace }} exec deploy/{{ include "silver-opendkim.fullname" . }} \
+    -- sh -c 'for d in /etc/dkimkeys/*; do echo "--- $(basename "$d") ---"; cat "$d"/*.txt; done'
+
+Publish each TXT record at `<selector>._domainkey.<domain>` in your DNS.
+
+----- 2. Wire Postfix to opendkim -----
+
+In your Postfix smtp-server chart / configmap, add:
+
+  smtpd_milters     = inet:{{ include "silver-opendkim.fullname" . }}:{{ .Values.service.port }}
+  non_smtpd_milters = inet:{{ include "silver-opendkim.fullname" . }}:{{ .Values.service.port }}
+  milter_default_action = accept
+
+(In docker-compose terms: replace `opendkim-server:8891` with the K8s Service
+DNS — by default the fullnameOverride is `opendkim-server`, so the existing
+hostname will Just Work as long as both charts share a namespace.)
+
+----- 3. Persistent storage -----
+
+DKIM private keys live on the PVC `{{ include "silver-opendkim.claimName" . }}`
+({{ .Values.persistence.size }}). The PVC survives `helm uninstall` — delete it
+explicitly to force key regeneration:
+
+  kubectl -n {{ .Release.Namespace }} delete pvc {{ include "silver-opendkim.claimName" . }}
+
+Back this PVC up: losing it means publishing new TXT records.

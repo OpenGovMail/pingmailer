@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "silver-opendkim.fullname" . }}
+  labels:
+    {{- include "silver-opendkim.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: milter
+      protocol: TCP
+      name: milter
+  selector:
+    {{- include "silver-opendkim.selectorLabels" . | nindent 4 }}

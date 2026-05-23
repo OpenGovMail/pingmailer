@@ -1,0 +1,121 @@
+# ---------------------------------------------------------------------------
+# silver-opendkim values
+#
+# Sensitive values (the domain list) are intentionally empty here. Provide
+# them at install/upgrade time, e.g.:
+#
+#   helm upgrade --install opendkim-server ./mail-infra/helm/opendkim-server \
+#     --namespace pingmailer --create-namespace \
+#     -f my-domains.yaml
+#
+# Where my-domains.yaml contains:
+#   domains:
+#     - domain: example.com
+#       selector: mail
+#       keySize: 2048
+# ---------------------------------------------------------------------------
+
+nameOverride: ""
+# fullnameOverride keeps the Service DNS short so Postfix can use
+# `inet:opendkim-server:8891` directly. Override only if you must.
+fullnameOverride: "opendkim-server"
+
+replicaCount: 1   # MUST stay 1 — DKIM keys live on a single-writer PVC.
+
+image:
+  repository: ghcr.io/lsflk/silver-dkim
+  tag: main
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# ---------------------------------------------------------------------------
+# Domains. REQUIRED — leave empty here and supply via --set / -f at upgrade
+# time. The chart fail()s loudly if this is empty.
+# ---------------------------------------------------------------------------
+domains: []
+# - domain: example.com
+#   selector: mail        # optional, default "mail"
+#   keySize: 2048         # optional, default 2048
+# - domain: another.example.com
+
+# ---------------------------------------------------------------------------
+# opendkim.conf knobs. Defaults mirror the docker-compose config.
+# ---------------------------------------------------------------------------
+opendkim:
+  mode: sv                            # s = sign, v = verify, sv = both
+  canonicalization: relaxed/simple
+  signatureAlgorithm: rsa-sha256
+  socket: "inet:8891@0.0.0.0"
+  autoRestart: "Yes"
+  autoRestartRate: "10/1h"
+  umask: "002"
+  syslog: "yes"
+  syslogSuccess: "Yes"
+  logWhy: "Yes"
+  userID: "opendkim:opendkim"
+  # Networks/hosts trusted to be signed (in addition to your configured
+  # domains, which the chart appends automatically).
+  trustedHosts:
+    - 127.0.0.1
+    - localhost
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+
+service:
+  type: ClusterIP
+  port: 8891
+
+# ---------------------------------------------------------------------------
+# Persistent storage for /etc/dkimkeys. silver-dkim generates per-domain
+# private keys here on first start and reuses them across restarts.
+#
+# Trade-off vs storing keys in a Secret:
+#  + Simpler — the container self-bootstraps.
+#  - Keys live on a PV; encryption at rest depends on your storage class.
+#  - Treat the PVC as sensitive and back it up out-of-band.
+#
+# If you prefer to manage keys as a Secret yourself, set
+# persistence.existingClaim to a CSI Secret-backed claim or hostPath you
+# control.
+# ---------------------------------------------------------------------------
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 256Mi
+
+# silver-dkim's opendkim user is UID/GID 999. fsGroup ensures the mounted
+# PVC is writable by that user so `opendkim-genkey` can persist keys.
+podSecurityContext:
+  fsGroup: 999
+
+securityContext:
+  runAsUser: 999
+  runAsGroup: 999
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+resources: {}
+  # requests:
+  #   cpu: 50m
+  #   memory: 64Mi
+  # limits:
+  #   cpu: 200m
+  #   memory: 128Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""

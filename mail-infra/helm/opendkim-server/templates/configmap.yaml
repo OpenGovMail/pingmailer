@@ -1,0 +1,63 @@
+{{- if not .Values.domains }}
+{{- fail "domains is required — pass via -f my-values.yaml or --set 'domains[0].domain=example.com'. Each entry needs at least a `domain` field; `selector` defaults to 'mail' and `keySize` to 2048." }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "silver-opendkim.fullname" . }}-conf
+  labels:
+    {{- include "silver-opendkim.labels" . | nindent 4 }}
+data:
+  opendkim.conf: |
+    AutoRestart             {{ .Values.opendkim.autoRestart }}
+    AutoRestartRate         {{ .Values.opendkim.autoRestartRate }}
+    UMask                   {{ .Values.opendkim.umask }}
+    Syslog                  {{ .Values.opendkim.syslog }}
+    SyslogSuccess           {{ .Values.opendkim.syslogSuccess }}
+    LogWhy                  {{ .Values.opendkim.logWhy }}
+
+    Canonicalization        {{ .Values.opendkim.canonicalization }}
+
+    ExternalIgnoreList      refile:/etc/opendkim/TrustedHosts
+    InternalHosts           refile:/etc/opendkim/TrustedHosts
+    KeyTable                refile:/etc/opendkim/KeyTable
+    SigningTable            refile:/etc/opendkim/SigningTable
+
+    Mode                    {{ .Values.opendkim.mode }}
+    PidFile                 /var/run/opendkim/opendkim.pid
+    SignatureAlgorithm      {{ .Values.opendkim.signatureAlgorithm }}
+
+    UserID                  {{ .Values.opendkim.userID }}
+
+    Socket                  {{ .Values.opendkim.socket }}
+
+  TrustedHosts: |
+    {{- range .Values.opendkim.trustedHosts }}
+    {{ . }}
+    {{- end }}
+    {{- range .Values.domains }}
+    {{ .domain }}
+    *.{{ .domain }}
+    {{- end }}
+
+  SigningTable: |
+    {{- range .Values.domains }}
+    {{- $selector := default "mail" .selector }}
+    *@{{ .domain }} {{ $selector }}._domainkey.{{ .domain }}
+    *@*.{{ .domain }} {{ $selector }}._domainkey.{{ .domain }}
+    {{- end }}
+
+  KeyTable: |
+    {{- range .Values.domains }}
+    {{- $selector := default "mail" .selector }}
+    {{ $selector }}._domainkey.{{ .domain }} {{ .domain }}:{{ $selector }}:/etc/dkimkeys/{{ .domain }}/{{ $selector }}.private
+    {{- end }}
+
+  silver.yaml: |
+    domains:
+    {{- range .Values.domains }}
+      - domain: {{ .domain }}
+        dkim-selector: {{ default "mail" .selector }}
+        dkim-key-size: {{ default 2048 .keySize }}
+    {{- end }}
