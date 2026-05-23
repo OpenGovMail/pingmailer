@@ -1,0 +1,23 @@
+apiVersion: v2
+name: silver-raven-sasl
+description: |
+  Helm chart for the raven-sasl service (ghcr.io/lsflk/raven-sasl) used by
+  the Pingmailer / Silver Mail stack. Provides a Dovecot-compatible SASL
+  authentication daemon on :12345 that delegates credential checks to
+  Thunder and validates OAUTHBEARER tokens against an OAuth client/email
+  allowlist. Postfix connects via smtpd_sasl_path = inet:raven-sasl:12345.
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - raven
+  - sasl
+  - dovecot
+  - oauth
+  - email
+  - pingmailer
+maintainers:
+  - name: LSFLK
+    url: https://github.com/lsflk
+sources:
+  - https://github.com/LSFLK/silver

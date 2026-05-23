@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "silver-raven-sasl.fullname" . }}
+  labels:
+    {{- include "silver-raven-sasl.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "silver-raven-sasl.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "silver-raven-sasl.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "silver-raven-sasl.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: raven-sasl
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: sasl
+              containerPort: 12345
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /etc/raven/raven.yaml
+              subPath: raven.yaml
+              readOnly: true
+            - name: config
+              mountPath: /app/config/oauth_client_email_authorization.json
+              subPath: oauth_client_email_authorization.json
+              readOnly: true
+            {{- if .Values.tlsSecret.name }}
+            - name: tls
+              mountPath: /certs
+              readOnly: true
+            {{- end }}
+          readinessProbe:
+            tcpSocket:
+              port: sasl
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: sasl
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "silver-raven-sasl.fullname" . }}-conf
+        {{- if .Values.tlsSecret.name }}
+        - name: tls
+          secret:
+            secretName: {{ .Values.tlsSecret.name }}
+            {{- if not .Values.tlsSecret.alreadyRenamed }}
+            items:
+              - key: tls.crt
+                path: fullchain.pem
+              - key: tls.key
+                path: privkey.pem
+            {{- end }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
