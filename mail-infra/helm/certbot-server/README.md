@@ -1,100 +1,136 @@
-# certbot-server Helm chart
+# silver-certificates Helm chart
 
-Helm chart for the `ghcr.io/lsflk/silver-certbot` service used by the
-Pingmailer / Silver Mail stack to obtain and renew Let's Encrypt
-certificates.
+Renders [cert-manager](https://cert-manager.io) `Certificate` CRDs for the
+Pingmailer / Silver Mail stack. Each configured domain gets a certificate
+covering `domain` and `*.domain`, issued by a Let's Encrypt ClusterIssuer via
+the Cloudflare DNS-01 solver.
 
-This chart is the Kubernetes equivalent of the `certbot-server` block in the
-repo-root `docker-compose.yml`:
+This chart replaces the old `certbot-server` container approach. It does **not**
+run a workload — it only declares `Certificate` resources. cert-manager
+reconciles them and writes the resulting TLS material into Kubernetes Secrets
+that your other workloads (smtp-server, api-server, etc.) mount.
 
-```yaml
-certbot-server:
-  image: ghcr.io/lsflk/silver-certbot:main
-  volumes:
-    - ./mail-infra/services/silver-config/certbot/keys/etc:/etc/letsencrypt
-    - ./mail-infra/services/silver-config/certbot/keys/log:/var/log/letsencrypt
-    - ./mail-infra/services/silver-config/certbot/keys/lib:/var/lib/letsencrypt
-  ports:
-    - "80:80"
-    - "443:443"
+Modeled after [LSFLK/silver#325](https://github.com/LSFLK/silver/pull/325).
+
+## Architecture
+
+```
+ ┌─────────────────────────┐    creates    ┌──────────────────────────┐
+ │ silver-certificates     │ ───────────▶  │ Certificate (per domain) │
+ │ Helm chart              │               └────────────┬─────────────┘
+ └─────────────────────────┘                            │ reconciled by
+                                                        ▼
+ ┌─────────────────────────┐    refers to   ┌──────────────────────────┐
+ │ ClusterIssuer           │ ◀───────────   │ cert-manager             │
+ │ (le-staging / le-prod)  │                └────────────┬─────────────┘
+ └────────────┬────────────┘                             │ DNS-01 via
+              │                                          ▼
+              │                              ┌──────────────────────────┐
+              └────────── uses ────────────▶ │ Cloudflare API           │
+                                             │ (api-token Secret)       │
+                                             └──────────────────────────┘
 ```
 
-## What it deploys
+## Prerequisites (one-time, per cluster)
 
-- A `Deployment` running the certbot-server image (single replica,
-  `Recreate` strategy since cert state is on RWO volumes).
-- A `Service` exposing ports 80 and 443.
-- Three `PersistentVolumeClaim`s mirroring the docker-compose bind mounts:
-  - `<release>-etc` → `/etc/letsencrypt`
-  - `<release>-lib` → `/var/lib/letsencrypt`
-  - `<release>-log` → `/var/log/letsencrypt`
-- An optional `Ingress` (disabled by default).
-- An optional `Secret` for DNS-provider credentials or other sensitive env
-  vars (only created when you actually pass `secret.*` values, or you can
-  reference an existing one via `existingSecret`).
+These steps are **not** managed by this chart.
 
-## Sensitive values
+### 1. Install cert-manager
 
-Nothing sensitive lives in `values.yaml`. Pass these at `helm upgrade` time:
+```bash
+helm install cert-manager oci://quay.io/jetstack/charts/cert-manager \
+  --version v1.20.0 \
+  --namespace cert-manager --create-namespace \
+  --set crds.enabled=true
+```
 
-| Key                          | Required | Notes                                                  |
-|------------------------------|----------|--------------------------------------------------------|
-| `letsencrypt.domain`         | yes      | Primary domain for the certificate                     |
-| `letsencrypt.email`          | yes      | ACME contact email                                     |
-| `letsencrypt.additionalDomains` | no    | Comma-separated SANs                                   |
-| `letsencrypt.staging`        | no       | `true` to use LE staging (recommended for first run)   |
-| `existingSecret`             | no       | Name of a pre-existing `Secret` to mount as `envFrom`  |
-| `secret.<key>`               | no       | If set, chart creates a Secret with these `stringData` |
+Verify:
+
+```bash
+kubectl get pods -n cert-manager   # all pods Running
+```
+
+### 2. Bootstrap ClusterIssuers and Cloudflare token
+
+```bash
+bash mail-infra/scripts/cert-manager-bootstrap.sh
+```
+
+The script prompts for your domain, Let's Encrypt email, and Cloudflare API
+token (Zone:Read + DNS:Edit on your zone). It creates:
+
+- `cloudflare-api-token` Secret in the `cert-manager` namespace
+- `le-staging` ClusterIssuer (Let's Encrypt staging — untrusted, no rate limits)
+- `le-prod` ClusterIssuer (Let's Encrypt prod — trusted, **5 certs/domain/week**)
+
+Verify:
+
+```bash
+kubectl get clusterissuer   # le-staging + le-prod with READY=True
+```
 
 ## Install / upgrade
 
+Sensitive values stay out of `values.yaml`. Pass them on the command line:
+
 ```bash
-helm upgrade --install certbot-server ./mail-infra/helm/certbot-server \
+helm upgrade --install silver-certificates ./mail-infra/helm/certbot-server \
   --namespace pingmailer --create-namespace \
-  --set letsencrypt.domain=mail.example.com \
-  --set letsencrypt.email=admin@example.com \
-  --set letsencrypt.staging=false
+  --set tls.issuer=le-staging \
+  --set 'tls.domains={mail.example.com,example.com}'
 ```
 
-With DNS-01 credentials via an existing Secret:
+When the staging certificate reports `READY=True`, flip to prod:
 
 ```bash
-kubectl -n pingmailer create secret generic certbot-dns \
-  --from-literal=CLOUDFLARE_API_TOKEN=xxxxx
-
-helm upgrade --install certbot-server ./mail-infra/helm/certbot-server \
-  --namespace pingmailer \
-  --set letsencrypt.domain=mail.example.com \
-  --set letsencrypt.email=admin@example.com \
-  --set existingSecret=certbot-dns
+helm upgrade --install silver-certificates ./mail-infra/helm/certbot-server \
+  --namespace pingmailer --reuse-values \
+  --set tls.issuer=le-prod
 ```
 
-Or have the chart create the Secret for you (still passed at the CLI, not
-committed to `values.yaml`):
+Track issuance:
 
 ```bash
-helm upgrade --install certbot-server ./mail-infra/helm/certbot-server \
-  --set letsencrypt.domain=mail.example.com \
-  --set letsencrypt.email=admin@example.com \
-  --set secret.CLOUDFLARE_API_TOKEN=xxxxx
+kubectl -n pingmailer get certificate
+kubectl -n pingmailer describe certificate mail-example-com-tls
+```
+
+## Values
+
+| Key                | Default      | Description                                                                 |
+|--------------------|--------------|-----------------------------------------------------------------------------|
+| `tls.enabled`      | `true`       | When false, no Certificates are rendered                                    |
+| `tls.issuer`       | `le-staging` | ClusterIssuer name (`le-staging` or `le-prod`)                              |
+| `tls.renewBefore`  | `720h`       | How long before expiry cert-manager renews                                  |
+| `tls.domains`      | `[]`         | **Required.** List of apex domains; each gets a cert for `d` and `*.d`      |
+
+`tls.domains` is intentionally empty in `values.yaml` — the chart `fail`s
+fast if you forget to pass it.
+
+## Consuming the certificates
+
+For each domain `d`, cert-manager writes a Secret named `<dash-d>-tls` (e.g.
+`mail.example.com` → `mail-example-com-tls`) containing `tls.crt` and `tls.key`.
+Mount it into your workloads:
+
+```yaml
+volumeMounts:
+  - name: tls
+    mountPath: /certs
+    readOnly: true
+volumes:
+  - name: tls
+    secret:
+      secretName: mail-example-com-tls
 ```
 
 ## Uninstall
 
 ```bash
-helm uninstall certbot-server -n pingmailer
+helm uninstall silver-certificates -n pingmailer
 ```
 
-PVCs are kept on uninstall to preserve the issued certificates. Delete them
-explicitly if you want a clean slate:
-
-```bash
-kubectl -n pingmailer delete pvc -l app.kubernetes.io/instance=certbot-server
-```
-
-## Sharing certs with other workloads
-
-The issued certs live on the `<release>-etc` PVC at `/etc/letsencrypt`. Mount
-that PVC read-only into the smtp-server / api-server pods (or run an init
-container that copies them out) — the same way the docker-compose stack
-shares the host bind mount across `smtp-server` and `api-server`.
+This removes the `Certificate` objects. cert-manager will then garbage-collect
+the underlying Secrets unless `Certificate.spec.secretTemplate` overrode the
+default behaviour. The ClusterIssuers and Cloudflare token Secret remain (they
+are cluster-scoped infra installed by the bootstrap script).

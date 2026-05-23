@@ -1,28 +1,42 @@
-certbot-server has been deployed.
+silver-certificates has been installed.
 
 Release:   {{ .Release.Name }}
 Namespace: {{ .Release.Namespace }}
-Domain:    {{ .Values.letsencrypt.domain | default "(unset — supply with --set letsencrypt.domain=...)" }}
-Staging:   {{ .Values.letsencrypt.staging }}
+Issuer:    {{ .Values.tls.issuer }}
 
-Service: {{ include "certbot-server.fullname" . }}
-  HTTP:  {{ .Values.service.httpPort }}
-  HTTPS: {{ .Values.service.httpsPort }}
+Certificates requested:
+{{- range .Values.tls.domains }}
+  - {{ . | replace "." "-" }}-tls   (covers {{ . }} and *.{{ . }})
+{{- end }}
 
-To check status:
-  kubectl --namespace {{ .Release.Namespace }} get deploy,svc,pvc -l app.kubernetes.io/instance={{ .Release.Name }}
+Track issuance:
 
-To tail logs:
-  kubectl --namespace {{ .Release.Namespace }} logs -f deploy/{{ include "certbot-server.fullname" . }}
+  kubectl -n {{ .Release.Namespace }} get certificate
+  kubectl -n {{ .Release.Namespace }} describe certificate <name>
 
-To upgrade with new sensitive values (NOT stored in values.yaml):
+Once a certificate shows READY=True, the TLS material is stored in a Secret
+of the same name. Mount it into your workloads, for example:
+
+  volumeMounts:
+    - name: tls
+      mountPath: /certs
+      readOnly: true
+  volumes:
+    - name: tls
+      secret:
+        secretName: <dash-domain>-tls   # tls.crt + tls.key keys
+
+Switch from staging to production once verified:
+
   helm upgrade --install {{ .Release.Name }} ./mail-infra/helm/certbot-server \
     --namespace {{ .Release.Namespace }} \
-    --set letsencrypt.domain=mail.example.com \
-    --set letsencrypt.email=admin@example.com \
-    --set letsencrypt.staging=false
+    --reuse-values \
+    --set tls.issuer=le-prod
 
-Persistent volumes provisioned (when persistence.enabled=true):
-  - {{ include "certbot-server.fullname" . }}-etc   -> /etc/letsencrypt
-  - {{ include "certbot-server.fullname" . }}-lib   -> /var/lib/letsencrypt
-  - {{ include "certbot-server.fullname" . }}-log   -> /var/log/letsencrypt
+Prerequisites (done once per cluster, NOT by this chart):
+  1. Install cert-manager:
+       helm install cert-manager oci://quay.io/jetstack/charts/cert-manager \
+         --version v1.20.0 --namespace cert-manager --create-namespace \
+         --set crds.enabled=true
+  2. Bootstrap ClusterIssuers + Cloudflare token:
+       bash mail-infra/scripts/cert-manager-bootstrap.sh

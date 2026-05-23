@@ -1,11 +1,17 @@
 apiVersion: v2
-name: certbot-server
-description: Helm chart for the Silver certbot-server that manages Let's Encrypt certificates for the Pingmailer stack
+name: silver-certificates
+description: |
+  Helm chart that renders cert-manager Certificate resources for the Pingmailer
+  / Silver Mail stack. Each configured domain gets a Certificate (covering
+  `domain` and `*.domain`) issued by a cluster-scoped ClusterIssuer.
+
+  This chart does NOT install cert-manager or create the ClusterIssuer — those
+  are one-time cluster bootstrap (see scripts/cert-manager-bootstrap.sh).
 type: application
 version: 0.1.0
-appVersion: "main"
+appVersion: "1.0.0"
 keywords:
-  - certbot
+  - cert-manager
   - letsencrypt
   - tls
   - certificates
@@ -14,4 +20,4 @@ maintainers:
   - name: LSFLK
     url: https://github.com/lsflk
 sources:
-  - https://github.com/lsflk/silver-certbot
+  - https://github.com/LSFLK/silver/pull/325
