@@ -1,0 +1,21 @@
+apiVersion: v2
+name: silver-smtp
+description: |
+  Helm chart for the Postfix-based SMTP server (ghcr.io/lsflk/silver-smtp)
+  used by the Pingmailer / Silver Mail stack. Renders main.cf / master.cf /
+  recipient_access from values, wires Postfix to opendkim-server,
+  raven-sasl, and (optionally) rspamd-server, mounts TLS certs from a
+  cert-manager Secret, and persists the mail queue on a PVC.
+type: application
+version: 0.1.0
+appVersion: "main"
+keywords:
+  - postfix
+  - smtp
+  - email
+  - pingmailer
+maintainers:
+  - name: LSFLK
+    url: https://github.com/lsflk
+sources:
+  - https://github.com/LSFLK/silver

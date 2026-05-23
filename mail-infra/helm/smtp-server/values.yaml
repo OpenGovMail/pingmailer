@@ -1,0 +1,149 @@
+# ---------------------------------------------------------------------------
+# silver-smtp values
+#
+# Sensitive values (mail domain, TLS Secret name) are intentionally empty
+# here. Supply them at install/upgrade time:
+#
+#   helm upgrade --install smtp-server ./mail-infra/helm/smtp-server \
+#     --namespace pingmailer --create-namespace \
+#     -f my-smtp-values.yaml
+# ---------------------------------------------------------------------------
+
+nameOverride: ""
+# Keep the Service DNS short so other services (and external MX) can address
+# this as `smtp-server:25`.
+fullnameOverride: "smtp-server"
+
+# Postfix queue lives on a single RWO PVC — do not scale.
+replicaCount: 1
+
+image:
+  repository: ghcr.io/lsflk/silver-smtp
+  tag: main
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# Primary mail domain. REQUIRED — chart fail()s if empty.
+domain: ""
+
+# Postfix `myhostname` (default: `mail.<domain>`).
+hostname: ""
+
+# ---------------------------------------------------------------------------
+# Postfix configuration knobs (rendered into main.cf / master.cf).
+# ---------------------------------------------------------------------------
+postfix:
+  # SMTP submission port 587 with enforced STARTTLS + SASL.
+  submission:
+    enabled: true
+
+  # Networks allowed to relay without SASL.
+  myNetworks:
+    - "127.0.0.0/8"
+
+  # Milters wired to the inbound smtpd (port 25). Address the other charts
+  # by their Service DNS — defaults match the rest of this repo's charts.
+  milters:
+    - "inet:opendkim-server:8891"
+
+  # Milters wired to submission (port 587). Includes rspamd if you deploy it.
+  submissionMilters:
+    - "inet:opendkim-server:8891"
+    # - "inet:rspamd-server:11332"   # uncomment once rspamd is deployed
+
+  milterProtocol: 6
+  milterDefaultAction: accept
+
+  # SASL — points at silver-raven-sasl.
+  sasl:
+    type: dovecot
+    path: "inet:raven-sasl:12345"
+
+  # TLS knobs (paths are derived from the mounted TLS Secret).
+  tls:
+    securityLevel: may     # `may` = opportunistic; `encrypt` = required
+    protocols: "!SSLv2 !SSLv3 !TLSv1 !TLSv1.1"
+    mandatoryProtocols: "!SSLv2 !SSLv3 !TLSv1 !TLSv1.1"
+    ciphers: high
+    mandatoryCiphers: high
+    excludeCiphers: "aNULL, DES, 3DES, MD5, DES+MD5, RC4"
+
+  # Per-client rate limits (per Postfix smtpd_client_*).
+  rateLimits:
+    connectionPerClient: 10
+    messagePerClient: 100
+    recipientPerClient: 200
+    connectionCount: 20
+
+  # Recipient access — rejects mail addressed to `@<domain>` (this domain
+  # only sends; it does not receive). Mirrors the docker-compose behaviour.
+  # Set to false to omit the REJECT rule entirely.
+  recipientAccess:
+    rejectAtDomain: true
+
+  # Redirect mail logs to stdout so `kubectl logs` works.
+  maillogFile: "/dev/stdout"
+
+  # Extra raw lines appended to main.cf. Use sparingly.
+  extraMainCf: []
+  # - "myorigin = $mydomain"
+
+# ---------------------------------------------------------------------------
+# TLS certificate Secret (typically produced by the silver-certificates
+# chart with keys `tls.crt` + `tls.key`). The chart remaps them to
+# fullchain.pem + privkey.pem under /etc/letsencrypt/live/<domain>/ to
+# match the paths Postfix expects.
+# ---------------------------------------------------------------------------
+tlsSecret:
+  name: ""
+  alreadyRenamed: false
+
+service:
+  # ClusterIP keeps the chart safe to install anywhere. Set to LoadBalancer
+  # (and add `loadBalancerIP` / annotations) to expose to the internet,
+  # or front the ClusterIP with an external L4 load balancer.
+  type: ClusterIP
+  loadBalancerIP: ""
+  annotations: {}
+  smtpPort: 25
+  submissionPort: 587
+
+# ---------------------------------------------------------------------------
+# Postfix mail queue. Persist this — losing it means dropping in-flight mail.
+# ---------------------------------------------------------------------------
+persistence:
+  spool:
+    enabled: true
+    existingClaim: ""
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 1Gi
+
+# Postfix needs root to bind :25/:587 and to chroot smtpd children, then
+# drops privs internally to the `postfix` user.
+podSecurityContext: {}
+securityContext:
+  # NET_BIND_SERVICE alone isn't enough — Postfix uses chroot which needs
+  # CAP_SYS_CHROOT and CAP_SETUID/CAP_SETGID. Leave defaults (root); the
+  # postfix master only stays root long enough to spawn workers.
+  allowPrivilegeEscalation: false
+
+resources: {}
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # limits:
+  #   cpu: 500m
+  #   memory: 512Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""

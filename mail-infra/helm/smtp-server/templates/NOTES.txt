@@ -1,0 +1,59 @@
+silver-smtp has been installed.
+
+Release:   {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+Hostname:  {{ include "silver-smtp.hostname" . }}
+Domain:    {{ .Values.domain }}
+
+Service:   {{ include "silver-smtp.fullname" . }}
+  SMTP:       :{{ .Values.service.smtpPort }}
+  {{- if .Values.postfix.submission.enabled }}
+  Submission: :{{ .Values.service.submissionPort }}
+  {{- end }}
+
+----- 1. Check the pod is up -----
+
+  kubectl -n {{ .Release.Namespace }} logs -f deploy/{{ include "silver-smtp.fullname" . }}
+  kubectl -n {{ .Release.Namespace }} get pod -l app.kubernetes.io/instance={{ .Release.Name }}
+
+----- 2. Service exposure -----
+
+Type: {{ .Values.service.type }}
+{{- if eq .Values.service.type "ClusterIP" }}
+
+  ClusterIP only — reachable from inside the cluster but NOT from the
+  public internet. To accept external mail, either:
+    a) Switch service.type to LoadBalancer (if your cloud provides L4 LB), OR
+    b) Front this ClusterIP with an external TCP load balancer / firewall NAT.
+
+{{- else if eq .Values.service.type "LoadBalancer" }}
+
+  Watch the LoadBalancer get its address:
+    kubectl -n {{ .Release.Namespace }} get svc {{ include "silver-smtp.fullname" . }} -w
+
+  Then publish DNS:
+    MX  {{ .Values.domain }}.  10  {{ include "silver-smtp.hostname" . }}.
+    A   {{ include "silver-smtp.hostname" . }}.   <load-balancer-ip>
+{{- end }}
+
+----- 3. Dependencies (charts you should already have installed) -----
+
+  silver-opendkim      (Service: opendkim-server:8891)
+  silver-raven-sasl    (Service: raven-sasl:12345)
+  silver-certificates  (TLS Secret: {{ .Values.tlsSecret.name | default "(not set)" }})
+
+----- 4. Mail queue -----
+
+The Postfix mail queue lives on the PVC `{{ include "silver-smtp.spoolClaim" . }}`
+({{ .Values.persistence.spool.size }}). Survives `helm uninstall`; delete
+explicitly to discard in-flight mail:
+
+  kubectl -n {{ .Release.Namespace }} delete pvc {{ include "silver-smtp.spoolClaim" . }}
+
+----- 5. Smoke-test SMTP -----
+
+  kubectl -n {{ .Release.Namespace }} run -it --rm tmp --image=busybox --restart=Never -- \
+    sh -c 'nc -v {{ include "silver-smtp.fullname" . }} {{ .Values.service.smtpPort }} <<EOF
+  EHLO test
+  QUIT
+  EOF'

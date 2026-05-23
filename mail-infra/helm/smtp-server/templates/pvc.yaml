@@ -1,0 +1,17 @@
+{{- if and .Values.persistence.spool.enabled (not .Values.persistence.spool.existingClaim) -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "silver-smtp.spoolClaim" . }}
+  labels:
+    {{- include "silver-smtp.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml .Values.persistence.spool.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.spool.size }}
+  {{- if .Values.persistence.spool.storageClass }}
+  storageClassName: {{ .Values.persistence.spool.storageClass | quote }}
+  {{- end }}
+{{- end }}
