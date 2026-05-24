@@ -33,6 +33,15 @@ domain: ${MAIL_DOMAIN}
 auth_server_url: https://thunder-server:8090/auth/credentials/authenticate
 
 sasl_scope: "tcp_only"
+
+# OAUTHBEARER Token Validation (RFC 7628)
+# Required when enabling AUTH=OAUTHBEARER for IMAP/SASL.
+oauth_issuer_url: "https://${MAIL_DOMAIN}:8090"
+oauth_jwks_url: "https://${MAIL_DOMAIN}:8090/oauth2/jwks"
+oauth_audience:
+  - "client_id_for_application"
+oauth_clock_skew_seconds: 60
+oauth_client_email_authorization_file: "/app/config/oauth_client_email_authorization.json"
 EOF
 
 echo "✅ Generated: $OUTPUT_FILE (domain: ${MAIL_DOMAIN})"

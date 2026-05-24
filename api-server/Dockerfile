@@ -52,12 +52,11 @@ RUN chown -R appuser:appuser /app
 # Since we mount them read-only (:ro), this is acceptable
 # For production, consider using Docker secrets or adjusting host file permissions
 
-# Expose ports
-# 8080 for HTTP, 8443 for HTTPS
-EXPOSE 8080 8443
+# Expose HTTPS port
+EXPOSE 8443
 
 # Set environment variables (can be overridden)
-ENV PORT=8080
+ENV PORT=8443
 ENV CERT_FILE=""
 ENV KEY_FILE=""
 

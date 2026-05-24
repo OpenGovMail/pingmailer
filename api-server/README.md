@@ -33,15 +33,23 @@ The API will be available at `https://your-domain:8443/notify`
 
 ```bash
 curl -X POST https://your-domain:8443/notify \
+  -H "Authorization: Bearer <access-token>" \
   -H "Content-Type: application/json" \
   -d '{
     "smtp_host": "smtp-server-container",
     "smtp_port": 587,
     "smtp_username": "user@yourdomain.com",
-    "smtp_password": "your-password",
     "smtp_sender": "noreply@yourdomain.com",
-    "recipient_email": "recipient@example.com",
-    "recipient_name": "John Doe",
+    "recipients": [
+      {
+        "email": "recipient1@example.com",
+        "name": "John Doe"
+      },
+      {
+        "email": "recipient2@example.com",
+        "name": "Jane Doe"
+      }
+    ],
     "app_name": "MyApp"
   }'
 ```
@@ -53,15 +61,18 @@ curl -X POST https://your-domain:8443/notify \
 | `smtp_host` | string | SMTP server hostname |
 | `smtp_port` | integer | SMTP server port (587 for TLS) |
 | `smtp_username` | string | SMTP authentication username |
-| `smtp_password` | string | SMTP authentication password |
 | `smtp_sender` | string | Sender email address |
-| `recipient_email` | string | Recipient's email address |
+| `recipients` or `recipient_email` | array or string | Recipient list or a single recipient email (legacy) |
+
+The request must include an `Authorization: Bearer <access-token>` header. The
+API forwards this token to SMTP using XOAUTH2 and does not validate it locally.
 
 ### Optional Fields
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `recipient_name` | string | "User" | Recipient's name |
+| `recipients` | array | - | List of recipients: `{ "email": "...", "name": "..." }` |
 | `app_name` | string | "Application" | Application name for email template |
 | `template` | string | - | Custom email template |
 | `template_data` | object | - | Data for custom template |
@@ -97,14 +108,19 @@ Access custom data in your template using `{{.FieldName}}`:
 
 ```bash
 curl -X POST https://your-domain:8443/notify \
+  -H "Authorization: Bearer <access-token>" \
   -H "Content-Type: application/json" \
   -d '{
     "smtp_host": "smtp-server",
     "smtp_port": 587,
     "smtp_username": "user@domain.com",
-    "smtp_password": "password",
     "smtp_sender": "noreply@domain.com",
-    "recipient_email": "user@example.com",
+    "recipients": [
+      {
+        "email": "user@example.com",
+        "name": "John"
+      }
+    ],
     "template": "{{define \"subject\"}}Password Reset{{end}}{{define \"plainBody\"}}Hi {{.Name}}, your code is {{.Code}}{{end}}{{define \"htmlBody\"}}<p>Hi {{.Name}}, your code is <strong>{{.Code}}</strong></p>{{end}}",
     "template_data": {
       "Name": "John",
@@ -117,11 +133,12 @@ curl -X POST https://your-domain:8443/notify \
 
 ### Success Response
 
-**Status:** `200 OK`
+**Status:** `202 Accepted`
 
 ```json
 {
-  "message": "Email sent successfully"
+  "message": "Email queued successfully",
+  "status": "ok"
 }
 ```
 
@@ -148,11 +165,8 @@ curl -X POST https://your-domain:8443/notify \
 ### Running Locally
 
 ```bash
-# Run with HTTP (default port 8080)
+# Run with HTTPS (requires valid cert/key files)
 make run
-
-# Run with HTTPS
-make run-https DOMAIN=yourdomain.com
 
 # Build binary
 make build
@@ -163,9 +177,6 @@ make build
 ```bash
 # Build image
 make docker-build
-
-# Run with HTTP
-make docker-run
 
 # Run with HTTPS
 make docker-run-https DOMAIN=yourdomain.com

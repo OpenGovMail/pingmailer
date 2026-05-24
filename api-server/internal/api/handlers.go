@@ -2,8 +2,11 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/mail"
+	"strconv"
 
 	"github.com/Silver-Mail-Platform/pingmailer/internal/emailer"
 )
@@ -26,12 +29,17 @@ type user struct {
 	APP   string
 }
 
+type recipient struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
 type notifyRequest struct {
 	SMTPHost       string         `json:"smtp_host"`
 	SMTPPort       int            `json:"smtp_port"`
 	SMTPUsername   string         `json:"smtp_username"`
-	SMTPPassword   string         `json:"smtp_password"`
 	SMTPSender     string         `json:"smtp_sender"`
+	Recipients     []recipient    `json:"recipients,omitempty"`
 	RecipientName  string         `json:"recipient_name"`
 	RecipientEmail string         `json:"recipient_email"`
 	AppName        string         `json:"app_name"`
@@ -58,16 +66,22 @@ func (app *App) handleNotify(w http.ResponseWriter, r *http.Request) {
 	}
 	applyNotifyDefaults(&req)
 
-	// Create a new mailer instance with the provided SMTP configuration
-	mailer := emailer.NewMailer(req.SMTPHost, req.SMTPPort, req.SMTPUsername, req.SMTPPassword, req.SMTPSender)
+	accessToken, _ := accessTokenFromContext(r.Context())
+	if accessToken == "" {
+		http.Error(w, "Unauthorized: missing access token", http.StatusUnauthorized)
+		return
+	}
 
-	defaultUser := buildDefaultUser(req)
+	// Create a new mailer instance with the provided SMTP configuration
+	mailer := emailer.NewMailer(req.SMTPHost, req.SMTPPort, req.SMTPUsername, req.SMTPSender, accessToken)
+
+	recipients := buildRecipients(req)
 
 	app.background(func() {
-		if err := sendNotifyEmail(mailer, req, defaultUser); err != nil {
+		if err := sendNotifyEmail(mailer, req, recipients); err != nil {
 			app.logger.Error("failed to send email", "error", err)
 		} else {
-			app.logger.Info("email sent successfully", "recipient", req.RecipientEmail)
+			app.logger.Info("email sent successfully", "recipient_count", len(recipients))
 		}
 	})
 
@@ -105,13 +119,10 @@ func validateNotifyRequest(w http.ResponseWriter, req notifyRequest) bool {
 	if !required(req.SMTPUsername != "", "Missing required field: smtp_username") {
 		return false
 	}
-	if !required(req.SMTPPassword != "", "Missing required field: smtp_password") {
-		return false
-	}
 	if !required(req.SMTPSender != "", "Missing required field: smtp_sender") {
 		return false
 	}
-	if !required(req.RecipientEmail != "", "Missing required field: recipient_email") {
+	if !required(len(req.Recipients) > 0 || req.RecipientEmail != "", "Missing required recipient field: recipient_email or recipients") {
 		return false
 	}
 
@@ -119,9 +130,22 @@ func validateNotifyRequest(w http.ResponseWriter, req notifyRequest) bool {
 		http.Error(w, "Invalid smtp_sender email format: "+err.Error(), http.StatusBadRequest)
 		return false
 	}
-	if _, err := mail.ParseAddress(req.RecipientEmail); err != nil {
-		http.Error(w, "Invalid recipient_email format: "+err.Error(), http.StatusBadRequest)
-		return false
+	if req.RecipientEmail != "" {
+		if _, err := mail.ParseAddress(req.RecipientEmail); err != nil {
+			http.Error(w, "Invalid recipient_email format: "+err.Error(), http.StatusBadRequest)
+			return false
+		}
+	}
+
+	for i, rcp := range req.Recipients {
+		if rcp.Email == "" {
+			http.Error(w, "Missing recipients["+strconv.Itoa(i)+"].email", http.StatusBadRequest)
+			return false
+		}
+		if _, err := mail.ParseAddress(rcp.Email); err != nil {
+			http.Error(w, "Invalid recipients["+strconv.Itoa(i)+"].email format: "+err.Error(), http.StatusBadRequest)
+			return false
+		}
 	}
 
 	return true
@@ -134,24 +158,56 @@ func applyNotifyDefaults(req *notifyRequest) {
 	if req.AppName == "" {
 		req.AppName = "Application"
 	}
-}
 
-func buildDefaultUser(req notifyRequest) user {
-	return user{
-		Name:  req.RecipientName,
-		Email: req.RecipientEmail,
-		APP:   req.AppName,
+	for i := range req.Recipients {
+		if req.Recipients[i].Name == "" {
+			req.Recipients[i].Name = "User"
+		}
 	}
 }
 
-func sendNotifyEmail(mailer emailer.Mailer, req notifyRequest, defaultUser user) error {
-	if req.Template == "" {
-		return mailer.Send(defaultUser.Email, "welcome.tmpl", defaultUser)
+func buildRecipients(req notifyRequest) []user {
+	recipients := make([]user, 0, len(req.Recipients)+1)
+
+	if req.RecipientEmail != "" {
+		recipients = append(recipients, user{
+			Name:  req.RecipientName,
+			Email: req.RecipientEmail,
+			APP:   req.AppName,
+		})
 	}
 
-	templateData := any(defaultUser)
-	if len(req.TemplateData) > 0 {
-		templateData = req.TemplateData
+	for _, rcp := range req.Recipients {
+		recipients = append(recipients, user{
+			Name:  rcp.Name,
+			Email: rcp.Email,
+			APP:   req.AppName,
+		})
 	}
-	return mailer.SendWithCustomTemplate(req.RecipientEmail, req.Template, templateData)
+
+	return recipients
+}
+
+func sendNotifyEmail(mailer emailer.Mailer, req notifyRequest, recipients []user) error {
+	var sendErrors []error
+
+	for _, recipient := range recipients {
+		if req.Template == "" {
+			if err := mailer.Send(recipient.Email, "welcome.tmpl", recipient); err != nil {
+				sendErrors = append(sendErrors, fmt.Errorf("recipient %s: %w", recipient.Email, err))
+			}
+			continue
+		}
+
+		templateData := any(recipient)
+		if len(req.TemplateData) > 0 {
+			templateData = req.TemplateData
+		}
+
+		if err := mailer.SendWithCustomTemplate(recipient.Email, req.Template, templateData); err != nil {
+			sendErrors = append(sendErrors, fmt.Errorf("recipient %s: %w", recipient.Email, err))
+		}
+	}
+
+	return errors.Join(sendErrors...)
 }

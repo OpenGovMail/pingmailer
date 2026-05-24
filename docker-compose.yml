@@ -29,6 +29,7 @@ services:
       - ./mail-infra/services/silver-config/raven/conf:/etc/raven:rw
       - ./mail-infra/services/silver-config/raven/certs:/certs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./mail-infra/conf/oauth_client_email_authorization.json:/app/config/oauth_client_email_authorization.json:ro
     environment:
       - DB_FILE=/app/data/databases/shared.db
     networks:

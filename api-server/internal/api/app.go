@@ -13,7 +13,6 @@ type Config struct {
 	CertFile string
 	KeyFile  string
 	OAuth2   OAuth2Config
-	Dev      bool
 }
 
 // OAuth2Config holds the OAuth2 server configuration.

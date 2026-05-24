@@ -2,15 +2,9 @@
 DOMAIN ?= yourdomain.com
 CERT_DIR ?= $(PWD)/../mail-infra/services/silver-config/certbot/keys/etc
 
-.PHONY: run build clean run-https docker-build docker-run docker-run-https docker-stop docker-clean
+.PHONY: run build clean docker-build docker-run-https docker-stop docker-clean
 
 run:
-	go run .
-
-dev:
-	go run . -dev
-
-run-https:
 	go run . -port 8443 -cert $(CERT_DIR)/live/$(DOMAIN)/fullchain.pem -key $(CERT_DIR)/live/$(DOMAIN)/privkey.pem
 
 build:
@@ -22,9 +16,6 @@ clean:
 # Docker commands
 docker-build:
 	docker build -t pingmailer-api .
-
-docker-run:
-	docker run -d -p 8080:8080 --name pingmailer-api pingmailer-api
 
 docker-run-https:
 	docker run -d \

@@ -51,7 +51,7 @@
    cp .env.example .env
    ```
    
-   Edit the `.env` file to set your `DOMAIN` for SSL certificate configuration. Note that SMTP credentials are provided in the API request body, not in this file.
+   Edit the `.env` file to set your `DOMAIN` for SSL certificate configuration.
 
 5. **Start the API server**
    ```bash
@@ -61,15 +61,23 @@
 6. **Send a test email**
    ```bash
    curl -k -X POST https://localhost:8443/notify \
+       -H "Authorization: Bearer <access-token>" \
      -H "Content-Type: application/json" \
      -d '{
        "smtp_host": "your_smtp_host",
        "smtp_port": 587,
        "smtp_username": "your_smtp_username",
-       "smtp_password": "your_smtp_password",
        "smtp_sender": "sender@example.com",
-       "recipient_email": "user@example.com"
+          "recipients": [
+             {
+                "email": "user@example.com",
+                "name": "User"
+             }
+          ]
      }'
+    ```
+
+    The API forwards the bearer access token to SMTP using XOAUTH2.
 
 ## Architecture
 
