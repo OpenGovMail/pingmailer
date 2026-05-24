@@ -1,0 +1,155 @@
+# Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+#
+# WSO2 LLC. licenses this file to you under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except
+# in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied. See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+server:
+  hostname: "0.0.0.0"
+  port: {{ .Values.configuration.server.port }}
+  http_only: {{ .Values.configuration.server.httpOnly }}
+  public_url: {{ .Values.configuration.server.publicUrl | quote }}
+
+gate_client:
+  hostname: {{ .Values.configuration.gateClient.hostname | quote }}
+  port: {{ .Values.configuration.gateClient.port }}
+  scheme: {{ .Values.configuration.gateClient.scheme | quote }}
+  login_path: {{ .Values.configuration.gateClient.loginPath | quote }}
+  error_path: {{ .Values.configuration.gateClient.errorPath | quote }}
+
+tls:
+  min_version: {{ .Values.configuration.tls.minVersion | quote }}
+  cert_file: {{ .Values.configuration.tls.certFile | quote }}
+  key_file: {{ .Values.configuration.tls.keyFile | quote }}
+
+crypto:
+  encryption:
+    key: {{ .Values.configuration.crypto.encryption.key | quote }}
+  password_hashing:
+    algorithm: {{ .Values.configuration.crypto.passwordHashing.algorithm | quote }}
+    pbkdf2:
+      salt_size: {{ .Values.configuration.crypto.passwordHashing.pbkdf2.salt_size }}
+      iterations: {{ .Values.configuration.crypto.passwordHashing.pbkdf2.iterations }}
+      key_size: {{ .Values.configuration.crypto.passwordHashing.pbkdf2.key_size }}
+    argon2id:
+      salt_size: {{ .Values.configuration.crypto.passwordHashing.argon2id.salt_size }}
+      iterations: {{ .Values.configuration.crypto.passwordHashing.argon2id.iterations }}
+      key_size: {{ .Values.configuration.crypto.passwordHashing.argon2id.key_size }}
+      memory: {{ .Values.configuration.crypto.passwordHashing.argon2id.memory }}
+      parallelism: {{ .Values.configuration.crypto.passwordHashing.argon2id.parallelism }}
+    sha256:
+      salt_size: {{ .Values.configuration.crypto.passwordHashing.sha256.salt_size }}
+  keys:
+  {{- range .Values.configuration.crypto.keys }}
+    - id: {{ .id | quote }}
+      cert_file: {{ .certFile | quote }}
+      key_file: {{ .keyFile | quote }}
+  {{- end }}
+
+database:
+  config:
+    type: {{ .Values.configuration.database.config.type | quote }}
+    {{- if eq .Values.configuration.database.config.type "sqlite" }}
+    path: {{ .Values.configuration.database.config.sqlitePath | quote }}
+    options: {{ .Values.configuration.database.config.sqliteOptions | quote }}
+    {{- else }}
+    hostname: {{ .Values.configuration.database.config.host | quote }}
+    port: {{ .Values.configuration.database.config.port }}
+    name: {{ .Values.configuration.database.config.name | quote }}
+    username: {{ .Values.configuration.database.config.username | quote }}
+    password: {{ "{{.DB_CONFIG_PASSWORD}}" | quote }}
+    sslmode: {{ .Values.configuration.database.config.sslmode | quote }}
+    {{- end }}
+  runtime:
+    type: {{ .Values.configuration.database.runtime.type | quote }}
+    {{- if eq .Values.configuration.database.runtime.type "sqlite" }}
+    path: {{ .Values.configuration.database.runtime.sqlitePath | quote }}
+    options: {{ .Values.configuration.database.runtime.sqliteOptions | quote }}
+    {{- else }}
+    hostname: {{ .Values.configuration.database.runtime.host | quote }}
+    port: {{ .Values.configuration.database.runtime.port }}
+    name: {{ .Values.configuration.database.runtime.name | quote }}
+    username: {{ .Values.configuration.database.runtime.username | quote }}
+    password: {{ "{{.DB_RUNTIME_PASSWORD}}" | quote }}
+    sslmode: {{ .Values.configuration.database.runtime.sslmode | quote }}
+    {{- end }}
+  user:
+    type: {{ .Values.configuration.database.user.type | quote }}
+    {{- if eq .Values.configuration.database.user.type "sqlite" }}
+    path: {{ .Values.configuration.database.user.sqlitePath | quote }}
+    options: {{ .Values.configuration.database.user.sqliteOptions | quote }}
+    {{- else }}
+    hostname: {{ .Values.configuration.database.user.host | quote }}
+    port: {{ .Values.configuration.database.user.port }}
+    name: {{ .Values.configuration.database.user.name | quote }}
+    username: {{ .Values.configuration.database.user.username | quote }}
+    password: {{ "{{.DB_USER_PASSWORD}}" | quote }}
+    sslmode: {{ .Values.configuration.database.user.sslmode | quote }}
+    {{- end }}    
+
+cache:
+  disabled: {{ .Values.configuration.cache.disabled }}
+  type: {{ .Values.configuration.cache.type | quote }}
+  size: {{ .Values.configuration.cache.size }}
+  ttl: {{ .Values.configuration.cache.ttl }}
+  eviction_policy: {{ .Values.configuration.cache.evictionPolicy | quote }}
+  cleanup_interval: {{ .Values.configuration.cache.cleanupInterval }}
+  {{- if eq .Values.configuration.cache.type "redis" }}
+  redis:
+    address: {{ .Values.configuration.cache.redis.address | quote }}
+    username: {{ .Values.configuration.cache.redis.username | quote }}
+    password: {{ "{{.CACHE_REDIS_PASSWORD}}" | quote }}
+    db: {{ .Values.configuration.cache.redis.db }}
+    key_prefix: {{ .Values.configuration.cache.redis.keyPrefix | quote }}
+  {{- end }}
+
+jwt:
+  issuer: {{ .Values.configuration.jwt.issuer | quote }}
+  validity_period: {{ .Values.configuration.jwt.validityPeriod }}
+  audience: {{ .Values.configuration.jwt.audience | quote }}
+  preferred_key_id: {{ .Values.configuration.jwt.preferredKeyId | quote }}
+
+oauth:
+  refresh_token:
+    renew_on_grant: {{ .Values.configuration.oauth.refreshToken.renewOnGrant }}
+    validity_period: {{ .Values.configuration.oauth.refreshToken.validityPeriod }}
+  authorization_code:
+    validity_period: {{ .Values.configuration.oauth.authorizationCode.validityPeriod }}
+  dcr:
+    insecure: {{ .Values.configuration.oauth.dcr.insecure }}
+
+flow:
+  default_auth_flow_handle: {{ .Values.configuration.flow.defaultAuthFlowHandle | quote }}
+  max_version_history: {{ .Values.configuration.flow.maxVersionHistory }}
+  auto_infer_registration: {{ .Values.configuration.flow.autoInferRegistration }}
+
+cors:
+  allowed_origins:
+  {{- range .Values.configuration.cors.allowedOrigins }}
+    - {{ . | quote }}
+  {{- end }}
+
+passkey:
+  allowed_origins:
+  {{- range .Values.configuration.passkey.allowedOrigins }}
+    - {{ . | quote }}
+  {{- end }}
+
+consent:
+  enabled: {{ .Values.configuration.consent.enabled }}
+  base_url: {{ .Values.configuration.consent.baseUrl | quote }}
+  timeout: {{ .Values.configuration.consent.timeout }}
+  max_retries: {{ .Values.configuration.consent.maxRetries }}
+
+declarative_resources:
+  enabled: {{ .Values.declarativeResources.enabled }}
