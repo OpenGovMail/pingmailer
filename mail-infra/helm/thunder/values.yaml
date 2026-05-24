@@ -91,6 +91,17 @@ thunder:
     passkey:
       allowedOrigins: []                  # REPLACE — usually same as cors.allowedOrigins
 
+    # Consent server (OpenFGC on :9090) — runs alongside Thunder in the same
+    # pod. Upstream defaults to Postgres; we override to SQLite to match the
+    # rest of the databases above. Use `enabled: false` if you don't need
+    # the consent flow.
+    consent:
+      enabled: true
+      database:
+        type: sqlite
+        sqlitePath: "repository/database/consentdb.db"
+        sqliteOptions: "_pragma=journal_mode(WAL)&_pragma=cache_size(-16000)"
+
   # ---------------------------------------------------------------------
   # Ingress (NGINX). REPLACE hostname + tlsSecretsName at install time.
   # Disable and front Thunder with your own ingress / gateway if needed.
