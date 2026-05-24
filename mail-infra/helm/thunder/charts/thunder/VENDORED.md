@@ -2,7 +2,11 @@
 
 This directory is a verbatim copy of the upstream Thunder Helm chart at the
 [`v0.32.0`](https://github.com/thunder-id/thunderid/tree/v0.32.0/install/helm)
-git tag. It is the **library** that the silver-thunder umbrella wraps.
+git tag, copyright © WSO2 LLC. Distributed under the **Apache License,
+Version 2.0** — see [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
+The per-file copyright headers are preserved unchanged.
+
+It is the **library** that the silver-thunder umbrella wraps.
 
 - **Configuration overrides go in the umbrella, not here.** Edit
   [`../../values.yaml`](../../values.yaml) (or a private overlay passed
