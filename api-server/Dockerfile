@@ -49,12 +49,5 @@ USER appuser
 # Expose HTTP port
 EXPOSE 8000
 
-# Set environment variables (can be overridden)
-ENV PORT=8000
-
-# Copy and set up entrypoint script
-COPY entrypoint.sh .
-RUN chmod +x entrypoint.sh
-
-# Use entrypoint script for proper signal handling
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["./api-server"]
+CMD ["-port", "8000"]
