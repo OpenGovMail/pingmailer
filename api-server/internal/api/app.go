@@ -8,11 +8,9 @@ import (
 
 // Config holds API server configuration.
 type Config struct {
-	Port     int
-	Version  string
-	CertFile string
-	KeyFile  string
-	OAuth2   OAuth2Config
+	Port    int
+	Version string
+	OAuth2  OAuth2Config
 }
 
 // OAuth2Config holds the OAuth2 server configuration.

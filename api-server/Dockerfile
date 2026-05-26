@@ -41,24 +41,16 @@ COPY --from=builder /build/api-server .
 # Copy templates directory (needed for email templates)
 COPY --from=builder /build/internal/emailer/templates ./internal/emailer/templates
 
-# Create directory for certificates (will be mounted as volume)
-RUN mkdir -p /certs
-
 # Change ownership of the app directory
 RUN chown -R appuser:appuser /app
 
-# Note: Running as root to access certificate files mounted from host
-# The certificate files are typically owned by root with restricted permissions
-# Since we mount them read-only (:ro), this is acceptable
-# For production, consider using Docker secrets or adjusting host file permissions
+USER appuser
 
-# Expose HTTPS port
-EXPOSE 8443
+# Expose HTTP port
+EXPOSE 8000
 
 # Set environment variables (can be overridden)
-ENV PORT=8443
-ENV CERT_FILE=""
-ENV KEY_FILE=""
+ENV PORT=8000
 
 # Copy and set up entrypoint script
 COPY entrypoint.sh .
