@@ -12,10 +12,8 @@ import (
 
 func main() {
 	var cfg api.Config
-	flag.IntVar(&cfg.Port, "port", 8443, "API server HTTPS port")
+	flag.IntVar(&cfg.Port, "port", 8000, "API server port")
 	flag.StringVar(&cfg.Version, "version", "0.1.0", "Version")
-	flag.StringVar(&cfg.CertFile, "cert", "", "Path to TLS certificate file (e.g., /path/to/fullchain.pem)")
-	flag.StringVar(&cfg.KeyFile, "key", "", "Path to TLS key file (e.g., /path/to/privkey.pem)")
 
 	flag.Parse()
 

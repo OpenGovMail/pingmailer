@@ -10,18 +10,14 @@ A simple REST API service for sending emails via SMTP. Part of the Silver Mail P
 # 1. Configure your environment
 cp .env.example .env
 
-# 2. Edit .env and update these values:
-#    - DOMAIN: your actual domain name
-#    - CERT_PATH: path to your SSL certificates
-
-# 3. Start the service
-docker compose -f docker-compose.https.yml up -d
+# 2. Start the service
+docker compose up -d
 
 # View logs
-docker logs pingmailer-api-server -f
+docker logs pingmailer-api -f
 ```
 
-The API will be available at `https://your-domain:8443/notify`
+The API will be available at `http://your-host:8000/notify`
 
 ## API Usage
 
@@ -32,7 +28,7 @@ The API will be available at `https://your-domain:8443/notify`
 **Example Request:**
 
 ```bash
-curl -X POST https://your-domain:8443/notify \
+curl -X POST http://your-host:8000/notify \
   -H "Authorization: Bearer <access-token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -107,7 +103,7 @@ HTML version of your email
 Access custom data in your template using `{{.FieldName}}`:
 
 ```bash
-curl -X POST https://your-domain:8443/notify \
+curl -X POST http://your-host:8000/notify \
   -H "Authorization: Bearer <access-token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -165,7 +161,7 @@ curl -X POST https://your-domain:8443/notify \
 ### Running Locally
 
 ```bash
-# Run with HTTPS (requires valid cert/key files)
+# Run server on port 8000
 make run
 
 # Build binary
@@ -178,8 +174,8 @@ make build
 # Build image
 make docker-build
 
-# Run with HTTPS
-make docker-run-https DOMAIN=yourdomain.com
+# Run container
+make docker-run
 
 # View logs
 make docker-logs

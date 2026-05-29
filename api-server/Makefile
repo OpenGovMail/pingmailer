@@ -1,11 +1,7 @@
-# Default values, can be overridden
-DOMAIN ?= yourdomain.com
-CERT_DIR ?= $(PWD)/../mail-infra/services/silver-config/certbot/keys/etc
-
-.PHONY: run build clean docker-build docker-run-https docker-stop docker-clean
+.PHONY: run build clean docker-build docker-run docker-stop docker-clean
 
 run:
-	go run . -port 8443 -cert $(CERT_DIR)/live/$(DOMAIN)/fullchain.pem -key $(CERT_DIR)/live/$(DOMAIN)/privkey.pem
+	go run . -port 8000
 
 build:
 	go build -o bin/pingmailer-api .
@@ -17,14 +13,10 @@ clean:
 docker-build:
 	docker build -t pingmailer-api .
 
-docker-run-https:
+docker-run:
 	docker run -d \
-		-p 8443:8443 \
-		-e PORT=8443 \
-		-e CERT_FILE=/certs/live/$(DOMAIN)/fullchain.pem \
-		-e KEY_FILE=/certs/live/$(DOMAIN)/privkey.pem \
-		-v $(CERT_DIR):/certs:ro \
-		--network mail-network \
+		-p 8000:8000 \
+		-e PORT=8000 \
 		--name pingmailer-api \
 		pingmailer-api
 
@@ -38,13 +30,11 @@ docker-clean: docker-stop
 docker-compose-up:
 	docker-compose up -d
 
-docker-compose-https:
-	docker-compose -f docker-compose.https.yml up -d
-
 docker-compose-down:
 	docker-compose down
 
 docker-logs:
 	docker logs -f pingmailer-api
+
 gci:
 	golangci-lint run
