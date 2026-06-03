@@ -23,9 +23,12 @@ fullnameOverride: "opendkim-server"
 replicaCount: 1   # MUST stay 1 — DKIM keys live on a single-writer PVC.
 
 image:
-  repository: ghcr.io/lsflk/silver-dkim
-  tag: main
-  pullPolicy: IfNotPresent
+  # OpenShift-compatible image: entrypoint is world-executable and writable
+  # dirs are group-owned by GID 0, so it runs under an arbitrary non-root UID.
+  # Built from mail-infra/images/silver-dkim.
+  repository: ghcr.io/silver-mail-platform/silver-dkim
+  tag: latest
+  pullPolicy: Always
 
 imagePullSecrets: []
 
@@ -53,7 +56,12 @@ opendkim:
   syslog: "yes"
   syslogSuccess: "Yes"
   logWhy: "Yes"
-  userID: "opendkim:opendkim"
+  # Empty omits the UserID directive so opendkim does not attempt
+  # setuid(opendkim) — which an arbitrary non-root UID (OpenShift) cannot do.
+  # The container already runs as the opendkim user on Docker/compose, so
+  # dropping this directive is safe on every platform. Set it back to
+  # "opendkim:opendkim" only if you specifically need opendkim to drop privs.
+  userID: ""
   # Networks/hosts trusted to be signed (in addition to your configured
   # domains, which the chart appends automatically).
   trustedHosts:
@@ -88,27 +96,31 @@ persistence:
     - ReadWriteOnce
   size: 256Mi
 
-# silver-dkim's opendkim user is UID/GID 999. fsGroup ensures the mounted
-# PVC is writable by that user so `opendkim-genkey` can persist keys.
-podSecurityContext:
-  fsGroup: 999
+# Left empty so OpenShift's restricted-v2 SCC can assign an fsGroup from the
+# namespace's allowed range, which makes the mounted PVC group-writable by the
+# arbitrary UID the pod runs as. On vanilla Kubernetes, set fsGroup: 999 here
+# so the image's opendkim user can write the PVC.
+podSecurityContext: {}
 
+# runAsUser/runAsGroup are intentionally omitted: OpenShift assigns an
+# arbitrary UID, and the OpenShift-compatible image runs fine under it. On
+# vanilla Kubernetes the image's own USER (opendkim/999) applies.
 securityContext:
-  runAsUser: 999
-  runAsGroup: 999
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: false
   capabilities:
     drop:
       - ALL
 
-resources: {}
-  # requests:
-  #   cpu: 50m
-  #   memory: 64Mi
-  # limits:
-  #   cpu: 200m
-  #   memory: 128Mi
+# Required: the nsw-infra-* namespaces enforce a ResourceQuota that rejects any
+# container without CPU/memory requests and limits. opendkim is tiny.
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
 
 nodeSelector: {}
 tolerations: []

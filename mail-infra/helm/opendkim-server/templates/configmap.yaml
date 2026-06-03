@@ -27,8 +27,10 @@ data:
     Mode                    {{ .Values.opendkim.mode }}
     PidFile                 /var/run/opendkim/opendkim.pid
     SignatureAlgorithm      {{ .Values.opendkim.signatureAlgorithm }}
+    {{- with .Values.opendkim.userID }}
 
-    UserID                  {{ .Values.opendkim.userID }}
+    UserID                  {{ . }}
+    {{- end }}
 
     Socket                  {{ .Values.opendkim.socket }}
 
