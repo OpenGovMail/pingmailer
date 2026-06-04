@@ -19,9 +19,10 @@ replicaCount: 1
 
 image:
   # Patched-Postfix (rootless) image built from mail-infra/images/silver-smtp-rootless.
-  # The postfix/master/postsuper getuid()==0 checks are removed so Postfix runs
-  # as an arbitrary non-root UID under OpenShift's restricted-v2 SCC — no custom
-  # SCC / anyuid grant required. (The `:latest` stock image needs root.)
+  # The postfix/master/postsuper getuid()==0 checks are removed and the
+  # set_eugid/set_ugid/chroot_uid privilege-drops are no-op'd for non-root, so
+  # Postfix runs single-UID as the arbitrary non-root UID OpenShift assigns
+  # under restricted-v2 — no custom SCC / anyuid grant required.
   repository: ghcr.io/silver-mail-platform/silver-smtp
   tag: rootless
   pullPolicy: Always
