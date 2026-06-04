@@ -18,9 +18,12 @@ fullnameOverride: "smtp-server"
 replicaCount: 1
 
 image:
-  repository: ghcr.io/lsflk/silver-smtp
-  tag: main
-  pullPolicy: IfNotPresent
+  # Stock (unmodified) silver-smtp rebuilt into our GHCR org from
+  # mail-infra/images/silver-smtp. Postfix runs as root, so the pod requires
+  # the dedicated `silver-smtp-scc` SCC bound to the smtp-server SA.
+  repository: ghcr.io/silver-mail-platform/silver-smtp
+  tag: latest
+  pullPolicy: Always
 
 imagePullSecrets: []
 
@@ -62,7 +65,7 @@ postfix:
 
   # TLS knobs (paths are derived from the mounted TLS Secret).
   tls:
-    securityLevel: may     # `may` = opportunistic; `encrypt` = required
+    securityLevel: may # `may` = opportunistic; `encrypt` = required
     protocols: "!SSLv2 !SSLv3 !TLSv1 !TLSv1.1"
     mandatoryProtocols: "!SSLv2 !SSLv3 !TLSv1 !TLSv1.1"
     ciphers: high
@@ -121,22 +124,25 @@ persistence:
       - ReadWriteOnce
     size: 1Gi
 
-# Postfix needs root to bind :25/:587 and to chroot smtpd children, then
-# drops privs internally to the `postfix` user.
+# Postfix runs as the image's root (uid 0) to bind :25/:587 and spawn workers,
+# then drops privileges internally to the `postfix` user. The dedicated
+# silver-smtp-scc SCC permits this; nothing is pinned here so OpenShift uses the
+# image's USER (root). chroot is disabled in master.cf, so no CAP_SYS_CHROOT.
 podSecurityContext: {}
 securityContext:
-  # NET_BIND_SERVICE alone isn't enough — Postfix uses chroot which needs
-  # CAP_SYS_CHROOT and CAP_SETUID/CAP_SETGID. Leave defaults (root); the
-  # postfix master only stays root long enough to spawn workers.
-  allowPrivilegeEscalation: false
+  # Postfix master setuid-drops to the postfix user, so privilege escalation
+  # must be allowed. The SCC drops ALL caps and re-adds only what Postfix needs.
+  allowPrivilegeEscalation: true
 
-resources: {}
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # limits:
-  #   cpu: 500m
-  #   memory: 512Mi
+# Required: the nsw-infra-* tenant-quota rejects any container without CPU/memory
+# requests + limits. Applied to BOTH the init and main containers.
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
 
 nodeSelector: {}
 tolerations: []

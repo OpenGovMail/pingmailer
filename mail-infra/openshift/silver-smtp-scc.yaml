@@ -1,0 +1,76 @@
+# ===========================================================================
+# Dedicated least-privilege SecurityContextConstraints for silver-smtp (Postfix)
+# on OpenShift.
+#
+# WHY: Postfix's binaries (postsuper, the queue manager invoked by
+# `postfix start`) have a hardcoded getuid()==0 check and refuse to run as a
+# non-root UID. So Postfix MUST run as root, which the default restricted-v2
+# SCC forbids. Rather than grant the broad built-in `anyuid`, this dedicated
+# SCC permits root + ONLY the capabilities Postfix needs, and is bound to just
+# the `smtp-server` service account in nsw-infra-prod.
+#
+# Capabilities (chroot is disabled in master.cf, so NO CAP_SYS_CHROOT):
+#   NET_BIND_SERVICE  bind privileged ports 25/587
+#   SETUID, SETGID    master drops privileges to the postfix user
+#   CHOWN, DAC_OVERRIDE, FOWNER   postfix set-permissions fixes the queue at startup
+#   KILL              master signals its child daemons
+#
+# APPLY (cluster-admin):
+#   oc apply -f silver-smtp-scc.yaml
+#   oc -n nsw-infra-prod create rolebinding smtp-server-scc \
+#     --clusterrole=system:openshift:scc:silver-smtp-scc \
+#     --serviceaccount=nsw-infra-prod:smtp-server
+#
+# The smtp-server SA must exist first (created by the helm install, or:
+#   oc -n nsw-infra-prod create sa smtp-server).
+# ===========================================================================
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: silver-smtp-scc
+  annotations:
+    kubernetes.io/description: >-
+      Postfix (silver-smtp): permits root + a minimal capability set, no chroot,
+      no privileged/host access. Intended for the smtp-server SA only.
+allowPrivilegedContainer: false
+allowPrivilegeEscalation: true        # Postfix master setuid-drops to the postfix user
+allowHostNetwork: false
+allowHostPorts: false
+allowHostPID: false
+allowHostIPC: false
+allowHostDirVolumePlugin: false
+readOnlyRootFilesystem: false
+runAsUser:
+  type: RunAsAny                      # permit the image's root (uid 0)
+seLinuxContext:
+  type: MustRunAs
+fsGroup:
+  type: RunAsAny
+supplementalGroups:
+  type: RunAsAny
+requiredDropCapabilities:
+  - ALL
+defaultAddCapabilities:               # auto-added; chart needs no securityContext.capabilities
+  - NET_BIND_SERVICE
+  - SETUID
+  - SETGID
+  - CHOWN
+  - DAC_OVERRIDE
+  - FOWNER
+  - KILL
+allowedCapabilities:
+  - NET_BIND_SERVICE
+  - SETUID
+  - SETGID
+  - CHOWN
+  - DAC_OVERRIDE
+  - FOWNER
+  - KILL
+volumes:
+  - configMap
+  - emptyDir
+  - persistentVolumeClaim
+  - projected
+  - secret
+users: []
+groups: []
