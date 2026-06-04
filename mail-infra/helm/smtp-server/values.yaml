@@ -18,11 +18,12 @@ fullnameOverride: "smtp-server"
 replicaCount: 1
 
 image:
-  # Stock (unmodified) silver-smtp rebuilt into our GHCR org from
-  # mail-infra/images/silver-smtp. Postfix runs as root, so the pod requires
-  # the dedicated `silver-smtp-scc` SCC bound to the smtp-server SA.
+  # Patched-Postfix (rootless) image built from mail-infra/images/silver-smtp-rootless.
+  # The postfix/master/postsuper getuid()==0 checks are removed so Postfix runs
+  # as an arbitrary non-root UID under OpenShift's restricted-v2 SCC — no custom
+  # SCC / anyuid grant required. (The `:latest` stock image needs root.)
   repository: ghcr.io/silver-mail-platform/silver-smtp
-  tag: latest
+  tag: rootless
   pullPolicy: Always
 
 imagePullSecrets: []
@@ -37,6 +38,14 @@ hostname: ""
 # Postfix configuration knobs (rendered into main.cf / master.cf).
 # ---------------------------------------------------------------------------
 postfix:
+  # Ports Postfix LISTENS on inside the container. The patched-Postfix image
+  # runs as a non-root UID and cannot bind <1024, so it listens on high ports
+  # and the Service remaps 25/587 -> these (service.smtpPort/submissionPort
+  # stay 25/587 for callers). On a root-capable platform set these to 25/587.
+  listen:
+    smtpPort: 10025
+    submissionPort: 10587
+
   # SMTP submission port 587 with enforced STARTTLS + SASL.
   submission:
     enabled: true
@@ -124,15 +133,14 @@ persistence:
       - ReadWriteOnce
     size: 1Gi
 
-# Postfix runs as the image's root (uid 0) to bind :25/:587 and spawn workers,
-# then drops privileges internally to the `postfix` user. The dedicated
-# silver-smtp-scc SCC permits this; nothing is pinned here so OpenShift uses the
-# image's USER (root). chroot is disabled in master.cf, so no CAP_SYS_CHROOT.
+# The patched-Postfix image runs single-UID as the arbitrary non-root UID that
+# OpenShift assigns (restricted-v2). Nothing is pinned here so the SCC assigns
+# the UID/fsGroup from the namespace range; chroot is disabled in master.cf.
 podSecurityContext: {}
 securityContext:
-  # Postfix master setuid-drops to the postfix user, so privilege escalation
-  # must be allowed. The SCC drops ALL caps and re-adds only what Postfix needs.
-  allowPrivilegeEscalation: true
+  # Single-UID Postfix never setuids, so no privilege escalation is needed —
+  # keep it false to stay compatible with the restricted-v2 SCC.
+  allowPrivilegeEscalation: false
 
 # Required: the nsw-infra-* tenant-quota rejects any container without CPU/memory
 # requests + limits. Applied to BOTH the init and main containers.

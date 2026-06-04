@@ -50,7 +50,9 @@ spec:
             - -c
             - |
               set -eu
-              cp -a /etc/postfix/. /shared-postfix/
+              # cp -rL (NOT -a): the pod runs as an arbitrary non-root UID and
+              # cannot preserve the image's root ownership/timestamps.
+              cp -rL /etc/postfix/. /shared-postfix/
               cp /configs/main.cf            /shared-postfix/main.cf
               cp /configs/master.cf          /shared-postfix/master.cf
               cp /configs/silver.yaml        /shared-postfix/silver.yaml
@@ -73,11 +75,11 @@ spec:
           {{- end }}
           ports:
             - name: smtp
-              containerPort: 25
+              containerPort: {{ .Values.postfix.listen.smtpPort }}
               protocol: TCP
             {{- if .Values.postfix.submission.enabled }}
             - name: submission
-              containerPort: 587
+              containerPort: {{ .Values.postfix.listen.submissionPort }}
               protocol: TCP
             {{- end }}
           volumeMounts:
