@@ -25,7 +25,7 @@ replicaCount: 2 # stateless; safe to scale
 # ---------------------------------------------------------------------------
 image:
   repository: ghcr.io/silver-mail-platform/pingmailer-api-server
-  tag: "latest"
+  tag: ""
   pullPolicy: Always
 
 imagePullSecrets: []

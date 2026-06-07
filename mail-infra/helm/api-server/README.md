@@ -223,7 +223,7 @@ ingress:
 | Key | Default | Notes |
 |---|---|---|
 | `image.repository` | `""` (**required**) | Your registry path, e.g. `ghcr.io/silver-mail-platform/pingmailer-api-server` |
-| `image.tag` | `latest` | Pin to a real version in production |
+| `image.tag` | `""` | Defaults to Chart.appVersion (0.1.0); pin to a real version in production |
 | `containerPort` | `8000` | Port the Go server listens on inside the pod |
 | `replicaCount` | `2` | API server is stateless — scale freely |
 
