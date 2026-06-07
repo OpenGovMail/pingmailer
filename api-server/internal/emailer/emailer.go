@@ -19,14 +19,16 @@ var templateFS embed.FS
 
 // Mailer handles email delivery using SMTP and embedded templates.
 type Mailer struct {
-	dialer *mail.Dialer
-	sender string
+	dialer     *mail.Dialer
+	sender     string
+	senderName string
 }
 
 // NewMailer returns a Mailer configured for SMTP auth. When accessToken is
-// provided, it uses XOAUTH2 with the SMTP sender as the user identifier in
-// the auth payload.
-func NewMailer(host string, port int, _ string, sender, accessToken string) Mailer {
+// provided, it uses XOAUTH2 with the SMTP sender (email address) as the user
+// identifier in the auth payload. senderName is the display name shown in the
+// From header; the SMTP/XOAUTH2 identity stays the bare sender address.
+func NewMailer(host string, port int, senderName string, sender, accessToken string) Mailer {
 	dialer := mail.NewDialer(host, port, "", "")
 	dialer.Auth = &xoauth2Auth{
 		username: sender,
@@ -35,8 +37,9 @@ func NewMailer(host string, port int, _ string, sender, accessToken string) Mail
 	dialer.Timeout = 2 * time.Second
 
 	return Mailer{
-		dialer: dialer,
-		sender: sender,
+		dialer:     dialer,
+		sender:     sender,
+		senderName: senderName,
 	}
 }
 
@@ -107,7 +110,12 @@ func (m Mailer) send(recipient string, tmpl *template.Template, data any) error 
 
 	msg := mail.NewMessage()
 	msg.SetHeader("To", recipient)
-	msg.SetHeader("From", m.sender)
+	if m.senderName != "" {
+		// smtp_username, address (and SMTP/XOAUTH2 identity) from smtp_sender.
+		msg.SetAddressHeader("From", m.sender, m.senderName)
+	} else {
+		msg.SetHeader("From", m.sender)
+	}
 	msg.SetHeader("Subject", subject.String())
 	msg.SetBody("text/plain", plainBody.String())
 	msg.AddAlternative("text/html", htmlBody.String())

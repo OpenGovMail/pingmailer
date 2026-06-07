@@ -1,0 +1,13 @@
+{{- if and .Values.pdb.enabled (gt (int .Values.replicaCount) 1) -}}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "silver-api-server.fullname" . }}
+  labels:
+    {{- include "silver-api-server.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "silver-api-server.selectorLabels" . | nindent 6 }}
+{{- end }}

@@ -1,0 +1,130 @@
+# ---------------------------------------------------------------------------
+# silver-api-server values
+#
+# The api-server is a stateless Go HTTP service. It listens on a plain HTTP
+# port, exposes POST /notify and GET /healthcheck, and relays mail to whatever
+# SMTP host/port the request body specifies (using the caller's Bearer token
+# as the XOAUTH2 credential).
+#
+# TLS for external callers is terminated at the ingress/route layer:
+#   - Kubernetes: use Ingress (NGINX, Traefik, etc.) — enabled by default
+#   - OpenShift:  use Route (optional) — disabled by default
+#
+#   helm upgrade --install api-server ./mail-infra/helm/api-server \
+#     --namespace nsw-infra-prod -f my-api-values.yaml
+# ---------------------------------------------------------------------------
+
+nameOverride: ""
+fullnameOverride: "api-server"
+
+replicaCount: 2 # stateless; safe to scale
+
+# ---------------------------------------------------------------------------
+# Container image. Build the Dockerfile under api-server/ and push it to a
+# registry the cluster can reach. See README for build commands.
+# ---------------------------------------------------------------------------
+image:
+  repository: ghcr.io/silver-mail-platform/pingmailer-api-server
+  tag: "latest"
+  pullPolicy: Always
+
+imagePullSecrets: []
+
+# Port the Go server listens on inside the container (passed as `-port`).
+# The image's default is 8000; keep it >1024 so it binds as a non-root UID.
+containerPort: 8000
+
+# ---------------------------------------------------------------------------
+# Service — ClusterIP (default). External access is via Ingress (Kubernetes)
+# or Route (OpenShift). In-cluster callers reach it as `api-server:<port>`.
+# ---------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  port: 8000
+  annotations: {}
+
+# ---------------------------------------------------------------------------
+# Kubernetes Ingress — TLS termination for standard Kubernetes clusters.
+# Requires an ingress controller (NGINX, Traefik, Istio, etc.).
+# Enabled by default for portable, cloud-friendly deployments.
+# ---------------------------------------------------------------------------
+ingress:
+  enabled: true
+  className: "" # e.g., "nginx", "traefik", "istio"
+  annotations: {} # e.g., cert-manager.io/cluster-issuer
+  hosts:
+    - host: api.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: api-tls
+      hosts:
+        - api.example.com
+
+# ---------------------------------------------------------------------------
+# OpenShift Route — TLS termination for OpenShift clusters (optional).
+# Disabled by default to keep the chart portable to vanilla Kubernetes.
+# Set route.enabled=true only if deploying to OpenShift.
+# ---------------------------------------------------------------------------
+route:
+  enabled: false
+  host: "" # leave empty for auto-generated OpenShift hostname
+  annotations: {}
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+    # Only needed for a custom host (PEM). Leave empty to use the router default cert.
+    key: ""
+    certificate: ""
+    caCertificate: ""
+
+# ---------------------------------------------------------------------------
+# Optional OAuth2 introspection URL. Currently unused by the api-server code
+# (the Bearer token is forwarded to SMTP as XOAUTH2, not validated locally).
+# Rendered as an env var only when set, for forward compatibility.
+# ---------------------------------------------------------------------------
+oauth2IntrospectUrl: ""
+
+extraEnv: []
+existingSecret: ""
+
+# Required by the nsw-infra-* tenant-quota (rejects containers without both).
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Nothing is pinned: OpenShift's restricted-v2 SCC assigns an arbitrary
+# non-root UID/fsGroup from the namespace range (the image's USER 1000 would
+# otherwise be rejected). The Go static binary runs fine under any UID.
+podSecurityContext: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true # the binary writes nothing (templates are embedded); /tmp is mounted
+
+probes:
+  livenessInitialDelay: 15
+  readinessInitialDelay: 5
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}
+
+pdb:
+  enabled: true
+  minAvailable: 1
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""

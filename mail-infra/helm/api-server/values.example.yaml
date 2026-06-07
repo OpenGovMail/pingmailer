@@ -1,0 +1,63 @@
+# Minimal overrides for the silver-api-server chart.
+# Copy to a private file (e.g. my-api-values.yaml) and DO NOT commit.
+#
+#   helm upgrade --install api-server ./mail-infra/helm/api-server \
+#     --namespace pingmailer --create-namespace \
+#     -f my-api-values.yaml
+
+# ============================================================================
+# REQUIRED — you must publish the api-server image to a registry your
+# cluster can reach. See README for build/push commands.
+# ============================================================================
+image:
+  repository: "ghcr.io/<your-org>/pingmailer-api-server"
+  tag: "0.1.0"
+
+# ============================================================================
+# DEFAULT: Kubernetes + Ingress (portable, recommended)
+# ============================================================================
+# Ingress is enabled by default. Use this for any Kubernetes cluster with
+# an ingress controller (NGINX, Traefik, Istio, etc.).
+ingress:
+  enabled: true
+  className: "nginx" # your ingress controller
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"  # optional
+  hosts:
+    - host: mail.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: mail-example-com-tls
+      hosts:
+        - mail.example.com
+
+# ============================================================================
+# OPTIONAL: OpenShift + Route (set route.enabled=true only on OpenShift)
+# ============================================================================
+# To deploy on OpenShift and use OpenShift Route instead of Ingress:
+#   1. Set route.enabled: true (below)
+#   2. Set ingress.enabled: false (or omit)
+#
+# route:
+#   enabled: true
+#   host: "mail.example.com"             # leave empty for auto-generated
+#   tls:
+#     termination: edge
+#     insecureEdgeTerminationPolicy: Redirect
+route:
+  enabled: false
+
+# ============================================================================
+# OPTIONAL — set if you ever wire token introspection into the api-server.
+# Currently unused by the Go code (the Bearer token is forwarded to SMTP as
+# XOAUTH2 without validation), but rendered as an env var for forward-compat.
+# ============================================================================
+oauth2IntrospectUrl: "https://thunder.example.com/oauth2/introspect"
+
+# ============================================================================
+# OPTIONAL — adjust replica count for availability
+# ============================================================================
+# replicaCount: 2  # stateless; safe to scale

@@ -1,0 +1,25 @@
+apiVersion: v2
+name: silver-api-server
+description: |
+  Portable Helm chart for the Pingmailer api-server (Go service that accepts
+  `POST /notify` and relays the request to SMTP using the caller's Bearer token
+  as the XOAUTH2 credential). Serves plain HTTP on :8000; external TLS is
+  terminated at the ingress/route layer (Kubernetes Ingress by default, OpenShift
+  Route optionally). Supports both vanilla Kubernetes and OpenShift clusters.
+  Runs rootless under restricted security contexts.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - api
+  - smtp
+  - mail
+  - pingmailer
+  - kubernetes
+  - openshift
+  - portable
+maintainers:
+  - name: LSFLK
+    url: https://github.com/lsflk
+sources:
+  - https://github.com/LSFLK/silver
