@@ -50,6 +50,11 @@ opendkim:
   canonicalization: relaxed/simple
   signatureAlgorithm: rsa-sha256
   socket: "inet:8891@0.0.0.0"
+  # The OpenShift-friendly image stores keys on a PVC under dirs that are
+  # group-writable (GID 0) so the arbitrary non-root UID can write them.
+  # OpenDKIM's default RequireSafeKeys=yes then refuses the key as "not
+  # secure" and TEMPFAILs signing (milter-reject 4.7.1). Disable the check.
+  requireSafeKeys: "no"
   autoRestart: "Yes"
   autoRestartRate: "10/1h"
   umask: "002"
