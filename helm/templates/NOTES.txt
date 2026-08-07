@@ -1,0 +1,34 @@
+pingmailer {{ .Chart.Version }} installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Components in this release:
+{{ if index .Values "api-server" "enabled" }}  [x]{{ else }}  [ ]{{ end }} api-server        http :8000   (POST /notify, GET /healthcheck)
+{{ if index .Values "opendkim-server" "enabled" }}  [x]{{ else }}  [ ]{{ end }} opendkim-server   milter :8891
+{{ if index .Values "raven-sasl-server" "enabled" }}  [x]{{ else }}  [ ]{{ end }} raven-sasl-server sasl :12345  (Service DNS: raven-sasl)
+{{ if index .Values "smtp-server" "enabled" }}  [x]{{ else }}  [ ]{{ end }} smtp-server       smtp :{{ (index .Values "smtp-server" "service").smtpPort | default 25 }} / submission :{{ (index .Values "smtp-server" "service").submissionPort | default 587 }}
+
+Check rollout:
+  kubectl -n {{ .Release.Namespace }} get pods,svc,pvc -l app.kubernetes.io/instance={{ .Release.Name }}
+  kubectl -n {{ .Release.Namespace }} rollout status deploy/smtp-server
+
+{{- if index .Values "opendkim-server" "enabled" }}
+
+Publish DKIM before sending — opendkim generates the keypair on first start.
+Read the public record out of the pod and add it to DNS:
+{{- range (index .Values "opendkim-server" "domains") }}
+  kubectl -n {{ $.Release.Namespace }} exec deploy/opendkim-server -- \
+    cat /etc/dkimkeys/{{ .domain }}/{{ .selector | default "mail" }}.txt
+  # -> TXT  {{ .selector | default "mail" }}._domainkey.{{ .domain }}
+{{- end }}
+{{- end }}
+
+{{- if index .Values "smtp-server" "enabled" }}
+
+Also publish SPF and DMARC for {{ (index .Values "smtp-server").domain }}, and point MX at
+{{ (index .Values "smtp-server").hostname | default (printf "mail.%s" (index .Values "smtp-server").domain) }} if this host should receive mail.
+
+Send a test message from inside the cluster:
+  kubectl -n {{ .Release.Namespace }} run smtp-test --rm -it --restart=Never --image=alpine -- \
+    sh -c 'apk add --no-cache swaks >/dev/null && swaks --server smtp-server:{{ (index .Values "smtp-server" "service").submissionPort | default 587 }} --tls ...'
+{{- end }}
+
+Full deployment guide: helm/README.md

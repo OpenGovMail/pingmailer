@@ -49,7 +49,7 @@ domains:
 ```
 
 ```bash
-helm upgrade --install opendkim-server ./mail-infra/helm/opendkim-server \
+helm upgrade --install opendkim-server ./helm/charts/opendkim-server \
   --namespace pingmailer --create-namespace \
   -f my-domains.yaml
 ```
@@ -57,7 +57,7 @@ helm upgrade --install opendkim-server ./mail-infra/helm/opendkim-server \
 Or inline:
 
 ```bash
-helm upgrade --install opendkim-server ./mail-infra/helm/opendkim-server \
+helm upgrade --install opendkim-server ./helm/charts/opendkim-server \
   --namespace pingmailer --create-namespace \
   --set 'domains[0].domain=example.com'
 ```

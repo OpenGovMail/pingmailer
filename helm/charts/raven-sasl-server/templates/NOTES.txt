@@ -32,7 +32,7 @@ master.cf string working when both charts share a namespace.)
 
 ----- Upgrade with new sensitive values -----
 
-  helm upgrade --install {{ .Release.Name }} ./mail-infra/helm/raven-sasl-server \
+  helm upgrade --install {{ .Release.Name }} ./helm/charts/raven-sasl-server \
     --namespace {{ .Release.Namespace }} -f my-raven-values.yaml
 
 ----- TLS -----

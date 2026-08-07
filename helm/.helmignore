@@ -1,0 +1,12 @@
+.DS_Store
+.git/
+.gitignore
+*.tmproj
+.idea/
+.vscode/
+*.swp
+*.bak
+*.tgz
+# Never package a filled-in values file.
+my-values.yaml
+my-*.yaml

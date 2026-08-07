@@ -68,5 +68,5 @@ Service:   {{ include "silver-api-server.fullname" . }}:{{ .Values.service.port 
 
 ----- 4. Upgrade -----
 
-  helm upgrade --install {{ .Release.Name }} ./mail-infra/helm/api-server \
+  helm upgrade --install {{ .Release.Name }} ./helm/charts/api-server \
     --namespace {{ .Release.Namespace }} -f my-api-values.yaml

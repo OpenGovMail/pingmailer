@@ -1,5 +1,5 @@
 apiVersion: v2
-name: silver-smtp
+name: smtp-server
 description: |
   Helm chart for the Postfix-based SMTP server (ghcr.io/lsflk/silver-smtp)
   used by the Pingmailer / Silver Mail stack. Renders main.cf / master.cf /

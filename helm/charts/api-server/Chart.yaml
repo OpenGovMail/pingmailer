@@ -1,5 +1,5 @@
 apiVersion: v2
-name: silver-api-server
+name: api-server
 description: |
   Portable Helm chart for the Pingmailer api-server (Go service that accepts
   `POST /notify` and relays the request to SMTP using the caller's Bearer token

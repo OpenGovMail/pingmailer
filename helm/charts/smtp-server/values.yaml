@@ -4,7 +4,7 @@
 # Sensitive values (mail domain, TLS Secret name) are intentionally empty
 # here. Supply them at install/upgrade time:
 #
-#   helm upgrade --install smtp-server ./mail-infra/helm/smtp-server \
+#   helm upgrade --install smtp-server ./helm/charts/smtp-server \
 #     --namespace pingmailer --create-namespace \
 #     -f my-smtp-values.yaml
 # ---------------------------------------------------------------------------
@@ -161,7 +161,7 @@ securityContext:
   # keep it false to stay compatible with the restricted-v2 SCC.
   allowPrivilegeEscalation: false
 
-# Required: the nsw-infra-* tenant-quota rejects any container without CPU/memory
+# Required: tenant ResourceQuotas reject any container without CPU/memory
 # requests + limits. Applied to BOTH the init and main containers.
 resources:
   requests:

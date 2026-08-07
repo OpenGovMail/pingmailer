@@ -61,7 +61,7 @@ tlsSecret:
 ```
 
 ```bash
-helm upgrade --install raven-sasl ./mail-infra/helm/raven-sasl-server \
+helm upgrade --install raven-sasl ./helm/charts/raven-sasl-server \
   --namespace pingmailer --create-namespace \
   -f my-raven-values.yaml
 ```

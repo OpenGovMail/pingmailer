@@ -1,5 +1,5 @@
 apiVersion: v2
-name: silver-raven-sasl
+name: raven-sasl-server
 description: |
   Helm chart for the raven-sasl service (ghcr.io/lsflk/raven-sasl) used by
   the Pingmailer / Silver Mail stack. Provides a Dovecot-compatible SASL
