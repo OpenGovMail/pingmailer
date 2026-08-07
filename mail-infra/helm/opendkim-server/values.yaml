@@ -1,0 +1,138 @@
+# ---------------------------------------------------------------------------
+# silver-opendkim values
+#
+# Sensitive values (the domain list) are intentionally empty here. Provide
+# them at install/upgrade time, e.g.:
+#
+#   helm upgrade --install opendkim-server ./mail-infra/helm/opendkim-server \
+#     --namespace pingmailer --create-namespace \
+#     -f my-domains.yaml
+#
+# Where my-domains.yaml contains:
+#   domains:
+#     - domain: example.com
+#       selector: mail
+#       keySize: 2048
+# ---------------------------------------------------------------------------
+
+nameOverride: ""
+# fullnameOverride keeps the Service DNS short so Postfix can use
+# `inet:opendkim-server:8891` directly. Override only if you must.
+fullnameOverride: "opendkim-server"
+
+replicaCount: 1   # MUST stay 1 — DKIM keys live on a single-writer PVC.
+
+image:
+  # OpenShift-compatible image: entrypoint is world-executable and writable
+  # dirs are group-owned by GID 0, so it runs under an arbitrary non-root UID.
+  # Built from mail-infra/images/silver-dkim.
+  repository: ghcr.io/silver-mail-platform/silver-dkim
+  tag: latest
+  pullPolicy: Always
+
+imagePullSecrets: []
+
+# ---------------------------------------------------------------------------
+# Domains. REQUIRED — leave empty here and supply via --set / -f at upgrade
+# time. The chart fail()s loudly if this is empty.
+# ---------------------------------------------------------------------------
+domains: []
+# - domain: example.com
+#   selector: mail        # optional, default "mail"
+#   keySize: 2048         # optional, default 2048
+# - domain: another.example.com
+
+# ---------------------------------------------------------------------------
+# opendkim.conf knobs. Defaults mirror the docker-compose config.
+# ---------------------------------------------------------------------------
+opendkim:
+  mode: sv                            # s = sign, v = verify, sv = both
+  canonicalization: relaxed/simple
+  signatureAlgorithm: rsa-sha256
+  socket: "inet:8891@0.0.0.0"
+  # The OpenShift-friendly image stores keys on a PVC under dirs that are
+  # group-writable (GID 0) so the arbitrary non-root UID can write them.
+  # OpenDKIM's default RequireSafeKeys=yes then refuses the key as "not
+  # secure" and TEMPFAILs signing (milter-reject 4.7.1). Disable the check.
+  requireSafeKeys: "no"
+  autoRestart: "Yes"
+  autoRestartRate: "10/1h"
+  umask: "002"
+  syslog: "yes"
+  syslogSuccess: "Yes"
+  logWhy: "Yes"
+  # Empty omits the UserID directive so opendkim does not attempt
+  # setuid(opendkim) — which an arbitrary non-root UID (OpenShift) cannot do.
+  # The container already runs as the opendkim user on Docker/compose, so
+  # dropping this directive is safe on every platform. Set it back to
+  # "opendkim:opendkim" only if you specifically need opendkim to drop privs.
+  userID: ""
+  # Networks/hosts trusted to be signed (in addition to your configured
+  # domains, which the chart appends automatically).
+  trustedHosts:
+    - 127.0.0.1
+    - localhost
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+
+service:
+  type: ClusterIP
+  port: 8891
+
+# ---------------------------------------------------------------------------
+# Persistent storage for /etc/dkimkeys. silver-dkim generates per-domain
+# private keys here on first start and reuses them across restarts.
+#
+# Trade-off vs storing keys in a Secret:
+#  + Simpler — the container self-bootstraps.
+#  - Keys live on a PV; encryption at rest depends on your storage class.
+#  - Treat the PVC as sensitive and back it up out-of-band.
+#
+# If you prefer to manage keys as a Secret yourself, set
+# persistence.existingClaim to a CSI Secret-backed claim or hostPath you
+# control.
+# ---------------------------------------------------------------------------
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 256Mi
+
+# Left empty so OpenShift's restricted-v2 SCC can assign an fsGroup from the
+# namespace's allowed range, which makes the mounted PVC group-writable by the
+# arbitrary UID the pod runs as. On vanilla Kubernetes, set fsGroup: 999 here
+# so the image's opendkim user can write the PVC.
+podSecurityContext: {}
+
+# runAsUser/runAsGroup are intentionally omitted: OpenShift assigns an
+# arbitrary UID, and the OpenShift-compatible image runs fine under it. On
+# vanilla Kubernetes the image's own USER (opendkim/999) applies.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+# Required: the nsw-infra-* namespaces enforce a ResourceQuota that rejects any
+# container without CPU/memory requests and limits. opendkim is tiny.
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
