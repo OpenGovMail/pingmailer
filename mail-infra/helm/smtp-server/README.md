@@ -76,21 +76,47 @@ This chart defaults to **`service.type: ClusterIP`** because:
 - Mail can be fronted by an external TCP LB or HAProxy you already manage.
 - ClusterIP installs cleanly in any cluster without extra requirements.
 
-To expose externally:
+> **A Route / Ingress will not work for SMTP.** OpenShift Routes and k8s
+> Ingress only carry HTTP/HTTPS/TLS-SNI on 80/443. Submission (587) starts in
+> plaintext and upgrades with STARTTLS — there is no SNI for the router to key
+> on — so raw 25/587 must be exposed with a `LoadBalancer` or `NodePort`.
+
+**Option A — LoadBalancer** (real `:25`/`:587` on a dedicated IP; needs a cloud
+L4 LB or MetalLB — stays `<pending>` on bare clusters with no provider):
 
 ```yaml
 service:
   type: LoadBalancer
-  loadBalancerIP: 203.0.113.5      # optional, depends on cloud provider
-  annotations:
-    # e.g. for GKE / EKS / AKS L4 LB annotations
+  loadBalancerIP: 203.0.113.5            # optional, depends on provider
+  loadBalancerSourceRanges: []           # optional CIDR allow-list
+  externalTrafficPolicy: Local           # preserve client IP for rate limits
+  annotations: {}                        # e.g. GKE / EKS / AKS L4 LB annotations
 ```
 
-Then publish DNS:
+**Option B — NodePort** (fallback when no LB provider exists; exposes high
+ports on every node IP — have the platform team open the firewall / NAT
+`587 -> nodePort`):
+
+```yaml
+service:
+  type: NodePort
+  externalTrafficPolicy: Local
+  nodePorts:
+    smtp: 30025
+    submission: 30587
+```
+
+Then publish DNS (point at the LB IP, or a node/edge IP for NodePort):
 
 ```
 mail.example.com.   A    203.0.113.5
 example.com.        MX   10  mail.example.com.
+```
+
+Test the external listener:
+
+```bash
+openssl s_client -starttls smtp -connect <external-ip>:587
 ```
 
 Outbound port 25 is blocked by most cloud providers and ISPs by default —
@@ -114,7 +140,10 @@ support case to unblock 25.
 | `postfix.maillogFile`                  | `/dev/stdout`                             | Set to `/var/log/mail.log` for legacy file logging     |
 | `persistence.spool.size`               | `1Gi`                                     | Postfix queue                                          |
 | `replicaCount`                         | `1` (**do not change**)                   | Singleton — PVC is RWO and the queue is single-writer  |
-| `service.type`                         | `ClusterIP`                               | Switch to `LoadBalancer` to expose externally          |
+| `service.type`                         | `ClusterIP`                               | `LoadBalancer` or `NodePort` to expose externally      |
+| `service.loadBalancerSourceRanges`     | `[]`                                      | CIDR allow-list for a LoadBalancer (empty = open)      |
+| `service.externalTrafficPolicy`        | `""`                                      | `Local` preserves client source IP (LB/NodePort)       |
+| `service.nodePorts.smtp` / `.submission` | `""`                                    | Pin NodePort numbers (30000-32767) when `type=NodePort`|
 
 ## Uninstall
 

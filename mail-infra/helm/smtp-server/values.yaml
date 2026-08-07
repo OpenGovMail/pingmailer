@@ -113,11 +113,29 @@ tlsSecret:
   alreadyRenamed: false
 
 service:
-  # ClusterIP keeps the chart safe to install anywhere. Set to LoadBalancer
-  # (and add `loadBalancerIP` / annotations) to expose to the internet,
-  # or front the ClusterIP with an external L4 load balancer.
+  # How clients reach SMTP/submission. NOTE: an OpenShift Route / Kubernetes
+  # Ingress CANNOT carry SMTP — they only route HTTP/HTTPS/TLS-SNI on 80/443,
+  # and submission (587) begins in plaintext with STARTTLS (no SNI to route on).
+  # So to accept mail from OUTSIDE the cluster you must use one of:
+  #   - LoadBalancer : real :25/:587 on a dedicated external IP (needs a cloud
+  #                    L4 LB or MetalLB; stays <pending> on bare clusters).
+  #   - NodePort     : exposes high ports (30000-32767) on every node IP; pin
+  #                    them via service.nodePorts below and have the platform
+  #                    team open the firewall / NAT 587 -> the nodePort.
+  #   - ClusterIP    : in-cluster only (default; safe to install anywhere).
   type: ClusterIP
   loadBalancerIP: ""
+  # Restrict who may reach a LoadBalancer (CIDRs). Empty = open to all.
+  loadBalancerSourceRanges: []
+  # "Local" preserves the real client source IP (so Postfix smtpd_client_*
+  # rate limits and SASL logging see the sender, not a node/SNAT address).
+  # Applies to LoadBalancer and NodePort only. "" leaves the cluster default.
+  externalTrafficPolicy: ""
+  # Pin the NodePort numbers when service.type=NodePort (else they're random).
+  # Must fall within the cluster's node-port range (default 30000-32767).
+  nodePorts:
+    smtp: ""
+    submission: ""
   annotations: {}
   smtpPort: 25
   submissionPort: 587

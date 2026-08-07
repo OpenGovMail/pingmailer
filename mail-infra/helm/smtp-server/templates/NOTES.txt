@@ -19,21 +19,41 @@ Service:   {{ include "silver-smtp.fullname" . }}
 ----- 2. Service exposure -----
 
 Type: {{ .Values.service.type }}
+
+  NOTE: an OpenShift Route / k8s Ingress cannot expose SMTP — they only carry
+  HTTP/HTTPS/TLS-SNI on 80/443. External 587 access requires LoadBalancer or
+  NodePort (below).
 {{- if eq .Values.service.type "ClusterIP" }}
 
   ClusterIP only — reachable from inside the cluster but NOT from the
   public internet. To accept external mail, either:
     a) Switch service.type to LoadBalancer (if your cloud provides L4 LB), OR
-    b) Front this ClusterIP with an external TCP load balancer / firewall NAT.
+    b) Switch service.type to NodePort and open the firewall to a node IP, OR
+    c) Front this ClusterIP with an external TCP load balancer / firewall NAT.
 
 {{- else if eq .Values.service.type "LoadBalancer" }}
 
-  Watch the LoadBalancer get its address:
+  Watch the LoadBalancer get its address (stays <pending> if the cluster has
+  no L4 LB provider — fall back to NodePort in that case):
     kubectl -n {{ .Release.Namespace }} get svc {{ include "silver-smtp.fullname" . }} -w
 
   Then publish DNS:
     MX  {{ .Values.domain }}.  10  {{ include "silver-smtp.hostname" . }}.
     A   {{ include "silver-smtp.hostname" . }}.   <load-balancer-ip>
+
+  Test from outside:
+    openssl s_client -starttls smtp -connect <load-balancer-ip>:{{ .Values.service.submissionPort }}
+
+{{- else if eq .Values.service.type "NodePort" }}
+
+  Find the assigned node ports:
+    kubectl -n {{ .Release.Namespace }} get svc {{ include "silver-smtp.fullname" . }} \
+      -o jsonpath='{range .spec.ports[*]}{.name}={.nodePort}{"\n"}{end}'
+
+  Connect from outside to <any-node-ip>:<submission-nodePort>. Have your
+  platform team open the firewall (and optionally NAT 587 -> the nodePort).
+  Test:
+    openssl s_client -starttls smtp -connect <node-ip>:<submission-nodePort>
 {{- end }}
 
 ----- 3. Dependencies (charts you should already have installed) -----
