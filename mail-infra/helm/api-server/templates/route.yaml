@@ -1,0 +1,38 @@
+{{- if .Values.route.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "silver-api-server.fullname" . }}
+  labels:
+    {{- include "silver-api-server.labels" . | nindent 4 }}
+  {{- with .Values.route.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.route.host }}
+  host: {{ . | quote }}
+  {{- end }}
+  to:
+    kind: Service
+    name: {{ include "silver-api-server.fullname" . }}
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: {{ .Values.route.tls.termination | default "edge" }}
+    insecureEdgeTerminationPolicy: {{ .Values.route.tls.insecureEdgeTerminationPolicy | default "Redirect" }}
+    {{- with .Values.route.tls.key }}
+    key: |-
+      {{- . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.route.tls.certificate }}
+    certificate: |-
+      {{- . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.route.tls.caCertificate }}
+    caCertificate: |-
+      {{- . | nindent 6 }}
+    {{- end }}
+  wildcardPolicy: None
+{{- end }}
