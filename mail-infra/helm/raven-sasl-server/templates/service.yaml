@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "silver-raven-sasl.fullname" . }}
+  labels:
+    {{- include "silver-raven-sasl.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: sasl
+      protocol: TCP
+      name: sasl
+  selector:
+    {{- include "silver-raven-sasl.selectorLabels" . | nindent 4 }}

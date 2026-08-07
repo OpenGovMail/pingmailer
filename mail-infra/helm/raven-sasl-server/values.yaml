@@ -1,0 +1,120 @@
+# ---------------------------------------------------------------------------
+# silver-raven-sasl values
+#
+# Sensitive values (mail domain, OAuth audience, email allowlist, TLS secret
+# name) are intentionally empty here. Supply them at install/upgrade time:
+#
+#   helm upgrade --install raven-sasl ./mail-infra/helm/raven-sasl-server \
+#     --namespace pingmailer --create-namespace \
+#     -f my-raven-values.yaml
+#
+# Where my-raven-values.yaml contains the secrets (DO NOT commit).
+# ---------------------------------------------------------------------------
+
+nameOverride: ""
+# Keep the Service DNS name short so Postfix's existing
+# `smtpd_sasl_path = inet:raven-sasl:12345` works as-is across this chart and
+# the smtp-server chart when they share a namespace.
+fullnameOverride: "raven-sasl"
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/lsflk/raven-sasl
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# ---------------------------------------------------------------------------
+# raven.yaml fields. The chart renders /etc/raven/raven.yaml from these.
+# ---------------------------------------------------------------------------
+config:
+  # Primary mail domain. REQUIRED.
+  domain: ""
+
+  # Thunder credential-auth endpoint. The default assumes thunder runs in the
+  # same namespace under the Service name `thunder-server`.
+  authServerUrl: "https://thunder-server:8090/auth/credentials/authenticate"
+
+  # SASL bind scope. "tcp_only" matches the docker-compose default.
+  saslScope: "tcp_only"
+
+  oauth:
+    # OAUTHBEARER (RFC 7628). issuerUrl + jwksUrl default to the values
+    # derived from config.domain when left empty:
+    #   issuerUrl:  https://<domain>:8090
+    #   jwksUrl:    https://<domain>:8090/oauth2/jwks
+    issuerUrl: ""
+    jwksUrl: ""
+
+    # OAuth audience(s) — the client IDs Raven will accept tokens for.
+    # REQUIRED — supply at least one entry via --set or -f.
+    audience: []
+    # - your-mail-app-client-id
+
+    clockSkewSeconds: 60
+
+# ---------------------------------------------------------------------------
+# OAuth client_id → authorized senders mapping. Mounted at
+# /app/config/oauth_client_email_authorization.json.
+#
+# This is the file referenced by raven.yaml's
+# `oauth_client_email_authorization_file`. Keys are OAuth client IDs; values
+# are the list of email addresses each client may send as.
+#
+# REQUIRED — supply via --set or -f. Empty here so secrets are not committed.
+# ---------------------------------------------------------------------------
+oauthEmailAuthorization: {}
+# Example (do NOT commit):
+# oauthEmailAuthorization:
+#   your-mail-app-client-id:
+#     - alerts@example.com
+#     - noreply@example.com
+
+# ---------------------------------------------------------------------------
+# TLS certs mounted at /certs (compatible with the silver-certificates chart,
+# which produces Secrets named <dash-domain>-tls with tls.crt + tls.key).
+#
+# Leave .name empty to skip the mount entirely. Set .alreadyRenamed=true if
+# the Secret already uses fullchain.pem / privkey.pem keys.
+# ---------------------------------------------------------------------------
+tlsSecret:
+  name: ""
+  alreadyRenamed: false
+
+service:
+  type: ClusterIP
+  port: 12345
+
+# Image runs as `ravenuser` UID/GID 1001.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+
+resources: {}
+  # requests:
+  #   cpu: 50m
+  #   memory: 64Mi
+  # limits:
+  #   cpu: 200m
+  #   memory: 256Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
