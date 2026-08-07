@@ -1,0 +1,145 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "silver-smtp.fullname" . }}
+  labels:
+    {{- include "silver-smtp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate          # Postfix queue PVC is RWO — avoid rolling.
+  selector:
+    matchLabels:
+      {{- include "silver-smtp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "silver-smtp.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "silver-smtp.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        # Postfix needs /etc/postfix to be WRITABLE because `postmap` compiles
+        # recipient_access into recipient_access.db next to the source file.
+        # ConfigMap subPath mounts are read-only, so we:
+        #   1. Seed an emptyDir with the image's stock /etc/postfix contents
+        #      (postfix-script, postfix-files.d, dynamicmaps.cf.d, …).
+        #   2. Overlay our four rendered configs.
+        #   3. Run `postmap` to build the lookup table.
+        - name: prepare-postfix
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              # cp -rL (NOT -a): the pod runs as an arbitrary non-root UID and
+              # cannot preserve the image's root ownership/timestamps.
+              cp -rL /etc/postfix/. /shared-postfix/
+              cp /configs/main.cf            /shared-postfix/main.cf
+              cp /configs/master.cf          /shared-postfix/master.cf
+              cp /configs/silver.yaml        /shared-postfix/silver.yaml
+              cp /configs/recipient_access   /shared-postfix/recipient_access
+              postmap /shared-postfix/recipient_access
+              echo "✓ /etc/postfix prepared, recipient_access compiled."
+          volumeMounts:
+            - name: postfix-etc
+              mountPath: /shared-postfix
+            - name: configs
+              mountPath: /configs
+              readOnly: true
+      containers:
+        - name: smtp
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: smtp
+              containerPort: {{ .Values.postfix.listen.smtpPort }}
+              protocol: TCP
+            {{- if .Values.postfix.submission.enabled }}
+            - name: submission
+              containerPort: {{ .Values.postfix.listen.submissionPort }}
+              protocol: TCP
+            {{- end }}
+          volumeMounts:
+            - name: postfix-etc
+              mountPath: /etc/postfix
+            - name: spool
+              mountPath: /var/spool/postfix
+            {{- if .Values.tlsSecret.name }}
+            - name: tls
+              mountPath: /etc/letsencrypt/live/{{ .Values.domain }}
+              readOnly: true
+            {{- end }}
+          readinessProbe:
+            tcpSocket:
+              port: smtp
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: smtp
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: configs
+          configMap:
+            name: {{ include "silver-smtp.fullname" . }}-conf
+        - name: postfix-etc
+          emptyDir: {}
+        - name: spool
+          {{- if .Values.persistence.spool.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "silver-smtp.spoolClaim" . }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- if .Values.tlsSecret.name }}
+        - name: tls
+          secret:
+            secretName: {{ .Values.tlsSecret.name }}
+            {{- if not .Values.tlsSecret.alreadyRenamed }}
+            items:
+              - key: tls.crt
+                path: fullchain.pem
+              - key: tls.key
+                path: privkey.pem
+            {{- end }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

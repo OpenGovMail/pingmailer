@@ -1,0 +1,182 @@
+# ---------------------------------------------------------------------------
+# silver-smtp values
+#
+# Sensitive values (mail domain, TLS Secret name) are intentionally empty
+# here. Supply them at install/upgrade time:
+#
+#   helm upgrade --install smtp-server ./mail-infra/helm/smtp-server \
+#     --namespace pingmailer --create-namespace \
+#     -f my-smtp-values.yaml
+# ---------------------------------------------------------------------------
+
+nameOverride: ""
+# Keep the Service DNS short so other services (and external MX) can address
+# this as `smtp-server:25`.
+fullnameOverride: "smtp-server"
+
+# Postfix queue lives on a single RWO PVC — do not scale.
+replicaCount: 1
+
+image:
+  # Patched-Postfix (rootless) image built from mail-infra/images/silver-smtp-rootless.
+  # The postfix/master/postsuper getuid()==0 checks are removed and the
+  # set_eugid/set_ugid/chroot_uid privilege-drops are no-op'd for non-root, so
+  # Postfix runs single-UID as the arbitrary non-root UID OpenShift assigns
+  # under restricted-v2 — no custom SCC / anyuid grant required.
+  repository: ghcr.io/silver-mail-platform/silver-smtp
+  tag: rootless
+  pullPolicy: Always
+
+imagePullSecrets: []
+
+# Primary mail domain. REQUIRED — chart fail()s if empty.
+domain: ""
+
+# Postfix `myhostname` (default: `mail.<domain>`).
+hostname: ""
+
+# ---------------------------------------------------------------------------
+# Postfix configuration knobs (rendered into main.cf / master.cf).
+# ---------------------------------------------------------------------------
+postfix:
+  # Ports Postfix LISTENS on inside the container. The patched-Postfix image
+  # runs as a non-root UID and cannot bind <1024, so it listens on high ports
+  # and the Service remaps 25/587 -> these (service.smtpPort/submissionPort
+  # stay 25/587 for callers). On a root-capable platform set these to 25/587.
+  listen:
+    smtpPort: 10025
+    submissionPort: 10587
+
+  # SMTP submission port 587 with enforced STARTTLS + SASL.
+  submission:
+    enabled: true
+
+  # Networks allowed to relay without SASL.
+  myNetworks:
+    - "127.0.0.0/8"
+
+  # Milters wired to the inbound smtpd (port 25). Address the other charts
+  # by their Service DNS — defaults match the rest of this repo's charts.
+  milters:
+    - "inet:opendkim-server:8891"
+
+  # Milters wired to submission (port 587). Includes rspamd if you deploy it.
+  submissionMilters:
+    - "inet:opendkim-server:8891"
+    # - "inet:rspamd-server:11332"   # uncomment once rspamd is deployed
+
+  milterProtocol: 6
+  milterDefaultAction: accept
+
+  # SASL — points at silver-raven-sasl.
+  sasl:
+    type: dovecot
+    path: "inet:raven-sasl:12345"
+
+  # TLS knobs (paths are derived from the mounted TLS Secret).
+  tls:
+    securityLevel: may # `may` = opportunistic; `encrypt` = required
+    protocols: "!SSLv2 !SSLv3 !TLSv1 !TLSv1.1"
+    mandatoryProtocols: "!SSLv2 !SSLv3 !TLSv1 !TLSv1.1"
+    ciphers: high
+    mandatoryCiphers: high
+    excludeCiphers: "aNULL, DES, 3DES, MD5, DES+MD5, RC4"
+
+  # Per-client rate limits (per Postfix smtpd_client_*).
+  rateLimits:
+    connectionPerClient: 10
+    messagePerClient: 100
+    recipientPerClient: 200
+    connectionCount: 20
+
+  # Recipient access — rejects mail addressed to `@<domain>` (this domain
+  # only sends; it does not receive). Mirrors the docker-compose behaviour.
+  # Set to false to omit the REJECT rule entirely.
+  recipientAccess:
+    rejectAtDomain: true
+
+  # Redirect mail logs to stdout so `kubectl logs` works.
+  maillogFile: "/dev/stdout"
+
+  # Extra raw lines appended to main.cf. Use sparingly.
+  extraMainCf: []
+  # - "myorigin = $mydomain"
+
+# ---------------------------------------------------------------------------
+# TLS certificate Secret (typically produced by the silver-certificates
+# chart with keys `tls.crt` + `tls.key`). The chart remaps them to
+# fullchain.pem + privkey.pem under /etc/letsencrypt/live/<domain>/ to
+# match the paths Postfix expects.
+# ---------------------------------------------------------------------------
+tlsSecret:
+  name: ""
+  alreadyRenamed: false
+
+service:
+  # How clients reach SMTP/submission. NOTE: an OpenShift Route / Kubernetes
+  # Ingress CANNOT carry SMTP — they only route HTTP/HTTPS/TLS-SNI on 80/443,
+  # and submission (587) begins in plaintext with STARTTLS (no SNI to route on).
+  # So to accept mail from OUTSIDE the cluster you must use one of:
+  #   - LoadBalancer : real :25/:587 on a dedicated external IP (needs a cloud
+  #                    L4 LB or MetalLB; stays <pending> on bare clusters).
+  #   - NodePort     : exposes high ports (30000-32767) on every node IP; pin
+  #                    them via service.nodePorts below and have the platform
+  #                    team open the firewall / NAT 587 -> the nodePort.
+  #   - ClusterIP    : in-cluster only (default; safe to install anywhere).
+  type: ClusterIP
+  loadBalancerIP: ""
+  # Restrict who may reach a LoadBalancer (CIDRs). Empty = open to all.
+  loadBalancerSourceRanges: []
+  # "Local" preserves the real client source IP (so Postfix smtpd_client_*
+  # rate limits and SASL logging see the sender, not a node/SNAT address).
+  # Applies to LoadBalancer and NodePort only. "" leaves the cluster default.
+  externalTrafficPolicy: ""
+  # Pin the NodePort numbers when service.type=NodePort (else they're random).
+  # Must fall within the cluster's node-port range (default 30000-32767).
+  nodePorts:
+    smtp: ""
+    submission: ""
+  annotations: {}
+  smtpPort: 25
+  submissionPort: 587
+
+# ---------------------------------------------------------------------------
+# Postfix mail queue. Persist this — losing it means dropping in-flight mail.
+# ---------------------------------------------------------------------------
+persistence:
+  spool:
+    enabled: true
+    existingClaim: ""
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 1Gi
+
+# The patched-Postfix image runs single-UID as the arbitrary non-root UID that
+# OpenShift assigns (restricted-v2). Nothing is pinned here so the SCC assigns
+# the UID/fsGroup from the namespace range; chroot is disabled in master.cf.
+podSecurityContext: {}
+securityContext:
+  # Single-UID Postfix never setuids, so no privilege escalation is needed —
+  # keep it false to stay compatible with the restricted-v2 SCC.
+  allowPrivilegeEscalation: false
+
+# Required: the nsw-infra-* tenant-quota rejects any container without CPU/memory
+# requests + limits. Applied to BOTH the init and main containers.
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""

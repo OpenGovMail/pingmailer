@@ -1,0 +1,79 @@
+silver-smtp has been installed.
+
+Release:   {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+Hostname:  {{ include "silver-smtp.hostname" . }}
+Domain:    {{ .Values.domain }}
+
+Service:   {{ include "silver-smtp.fullname" . }}
+  SMTP:       :{{ .Values.service.smtpPort }}
+  {{- if .Values.postfix.submission.enabled }}
+  Submission: :{{ .Values.service.submissionPort }}
+  {{- end }}
+
+----- 1. Check the pod is up -----
+
+  kubectl -n {{ .Release.Namespace }} logs -f deploy/{{ include "silver-smtp.fullname" . }}
+  kubectl -n {{ .Release.Namespace }} get pod -l app.kubernetes.io/instance={{ .Release.Name }}
+
+----- 2. Service exposure -----
+
+Type: {{ .Values.service.type }}
+
+  NOTE: an OpenShift Route / k8s Ingress cannot expose SMTP — they only carry
+  HTTP/HTTPS/TLS-SNI on 80/443. External 587 access requires LoadBalancer or
+  NodePort (below).
+{{- if eq .Values.service.type "ClusterIP" }}
+
+  ClusterIP only — reachable from inside the cluster but NOT from the
+  public internet. To accept external mail, either:
+    a) Switch service.type to LoadBalancer (if your cloud provides L4 LB), OR
+    b) Switch service.type to NodePort and open the firewall to a node IP, OR
+    c) Front this ClusterIP with an external TCP load balancer / firewall NAT.
+
+{{- else if eq .Values.service.type "LoadBalancer" }}
+
+  Watch the LoadBalancer get its address (stays <pending> if the cluster has
+  no L4 LB provider — fall back to NodePort in that case):
+    kubectl -n {{ .Release.Namespace }} get svc {{ include "silver-smtp.fullname" . }} -w
+
+  Then publish DNS:
+    MX  {{ .Values.domain }}.  10  {{ include "silver-smtp.hostname" . }}.
+    A   {{ include "silver-smtp.hostname" . }}.   <load-balancer-ip>
+
+  Test from outside:
+    openssl s_client -starttls smtp -connect <load-balancer-ip>:{{ .Values.service.submissionPort }}
+
+{{- else if eq .Values.service.type "NodePort" }}
+
+  Find the assigned node ports:
+    kubectl -n {{ .Release.Namespace }} get svc {{ include "silver-smtp.fullname" . }} \
+      -o jsonpath='{range .spec.ports[*]}{.name}={.nodePort}{"\n"}{end}'
+
+  Connect from outside to <any-node-ip>:<submission-nodePort>. Have your
+  platform team open the firewall (and optionally NAT 587 -> the nodePort).
+  Test:
+    openssl s_client -starttls smtp -connect <node-ip>:<submission-nodePort>
+{{- end }}
+
+----- 3. Dependencies (charts you should already have installed) -----
+
+  silver-opendkim      (Service: opendkim-server:8891)
+  silver-raven-sasl    (Service: raven-sasl:12345)
+  silver-certificates  (TLS Secret: {{ .Values.tlsSecret.name | default "(not set)" }})
+
+----- 4. Mail queue -----
+
+The Postfix mail queue lives on the PVC `{{ include "silver-smtp.spoolClaim" . }}`
+({{ .Values.persistence.spool.size }}). Survives `helm uninstall`; delete
+explicitly to discard in-flight mail:
+
+  kubectl -n {{ .Release.Namespace }} delete pvc {{ include "silver-smtp.spoolClaim" . }}
+
+----- 5. Smoke-test SMTP -----
+
+  kubectl -n {{ .Release.Namespace }} run -it --rm tmp --image=busybox --restart=Never -- \
+    sh -c 'nc -v {{ include "silver-smtp.fullname" . }} {{ .Values.service.smtpPort }} <<EOF
+  EHLO test
+  QUIT
+  EOF'
