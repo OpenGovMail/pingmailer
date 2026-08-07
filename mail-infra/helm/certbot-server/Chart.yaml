@@ -1,0 +1,23 @@
+apiVersion: v2
+name: silver-certificates
+description: |
+  Helm chart that renders cert-manager Certificate resources for the Pingmailer
+  / Silver Mail stack. Each configured domain gets a Certificate (covering
+  `domain` and `*.domain`) issued by a cluster-scoped ClusterIssuer.
+
+  This chart does NOT install cert-manager or create the ClusterIssuer — those
+  are one-time cluster bootstrap (see scripts/cert-manager-bootstrap.sh).
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - cert-manager
+  - letsencrypt
+  - tls
+  - certificates
+  - pingmailer
+maintainers:
+  - name: LSFLK
+    url: https://github.com/lsflk
+sources:
+  - https://github.com/LSFLK/silver/pull/325

@@ -1,0 +1,40 @@
+# ---------------------------------------------------------------------------
+# silver-certificates values
+#
+# Sensitive values (domain list, ACME email, Cloudflare API token) are NOT
+# baked into this file. Pass them at install/upgrade time:
+#
+#   helm upgrade --install silver-certificates ./mail-infra/helm/certbot-server \
+#     --namespace pingmailer --create-namespace \
+#     --set tls.issuer=le-staging \
+#     --set 'tls.domains={mail.example.com,example.com}'
+#
+# The cert-manager ClusterIssuers referenced here (le-staging / le-prod) and
+# the Cloudflare API token Secret are created by the one-time bootstrap script
+# at mail-infra/scripts/cert-manager-bootstrap.sh — they are NOT managed by
+# this chart.
+# ---------------------------------------------------------------------------
+
+nameOverride: ""
+fullnameOverride: ""
+
+tls:
+  # Set to false to skip rendering any Certificate resources.
+  enabled: true
+
+  # Name of the cert-manager ClusterIssuer to use.
+  #   - le-staging : Let's Encrypt staging (untrusted certs, no rate limits)
+  #   - le-prod    : Let's Encrypt production (trusted, 5 certs/domain/week)
+  # Start with le-staging; flip to le-prod after the staging cert reports Ready.
+  issuer: le-staging
+
+  # How long before expiry cert-manager should attempt renewal.
+  renewBefore: "720h"
+
+  # Domains to request certificates for. REQUIRED — leave empty here and
+  # provide via --set at install/upgrade time so secrets are not committed.
+  # Each entry produces a Certificate covering `<domain>` and `*.<domain>`,
+  # stored in a Secret named `<dash-domain>-tls`.
+  domains: []
+  # Example (pass via CLI):
+  #   --set 'tls.domains={mail.example.com,example.com}'
