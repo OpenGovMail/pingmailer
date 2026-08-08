@@ -43,6 +43,35 @@ via `fullnameOverride` in each subchart, so **install all components into the
 same namespace** and don't rename them unless you update
 `smtp-server.postfix.milters` and `smtp-server.postfix.sasl.path` to match.
 
+## Installing from the chart registry
+
+Released versions are published to GHCR as OCI artifacts, so you can install
+without cloning this repo:
+
+```bash
+helm show values oci://ghcr.io/silver-mail-platform/charts/pingmailer --version <version> > my-values.yaml
+# edit my-values.yaml, then:
+helm install pingmailer oci://ghcr.io/silver-mail-platform/charts/pingmailer \
+  --version <version> -n <namespace> -f my-values.yaml
+```
+
+`helm search` does not work against OCI registries. List available versions with:
+
+```bash
+helm show chart oci://ghcr.io/silver-mail-platform/charts/pingmailer --version <version>
+```
+
+If the package is private, authenticate first with a token that has
+`read:packages`:
+
+```bash
+echo $GITHUB_TOKEN | helm registry login ghcr.io -u <username> --password-stdin
+```
+
+All four subcharts are vendored into the package, so there are no dependencies
+to pull. Everything below applies equally to a registry install and a local
+`./helm` install — substitute the OCI URL for the path.
+
 ## Prerequisites
 
 | Requirement | Notes |

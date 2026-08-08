@@ -1,0 +1,131 @@
+name: Publish Helm chart
+
+# Packages the pingmailer umbrella chart and pushes it to GHCR as an OCI
+# artifact, using the same release that publishes the container images.
+#
+# Release flow:
+#   git tag v0.2.0 && git push origin v0.2.0
+#   ...then publish a GitHub Release for that tag (or use workflow_dispatch).
+#
+# The chart is versioned from the release tag rather than from Chart.yaml, so
+# the chart, its appVersion and the image tags always agree for a given
+# release. Chart.yaml's own version is the development placeholder.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (e.g. 0.2.0)"
+        required: true
+        type: string
+  # Lint and package on PRs touching the chart. Never pushes.
+  pull_request:
+    paths:
+      - "helm/**"
+      - ".github/workflows/helm-release.yaml"
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.19.4
+
+      - name: Resolve version
+        id: v
+        run: |
+          case "${{ github.event_name }}" in
+            release)           version="${GITHUB_REF_NAME#v}" ;;
+            workflow_dispatch) version="${{ inputs.version }}" ;;
+            *)                 version="0.0.0-pr.${{ github.event.number }}" ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Publishing chart version: $version"
+
+      - name: Lint
+        run: |
+          helm lint ./helm -f helm/values.example.yaml
+          # Each subchart must also stand alone — it can be installed by itself.
+          for c in helm/charts/*/; do helm lint "$c"; done
+
+      - name: Render smoke test
+        run: |
+          # The example values must produce a complete, parseable manifest.
+          helm template pingmailer ./helm -f helm/values.example.yaml > /tmp/rendered.yaml
+          count=$(grep -c '^kind:' /tmp/rendered.yaml)
+          echo "Rendered $count resources"
+          if [ "$count" -lt 15 ]; then
+            echo "::error::Only $count resources rendered — expected the full stack."
+            exit 1
+          fi
+          # The required-value guards must still fire when values are absent,
+          # otherwise a misconfigured install would fail in-cluster instead of
+          # at render time.
+          if helm template pingmailer ./helm >/dev/null 2>&1; then
+            echo "::error::Chart rendered with no values — required-value guards are broken."
+            exit 1
+          fi
+          echo "Required-value guards fire as expected"
+
+      - name: Package
+        run: |
+          v="${{ steps.v.outputs.version }}"
+          helm package ./helm -d dist --version "$v" --app-version "$v"
+          ls -lh dist/
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | helm registry login "${{ env.REGISTRY }}" \
+                --username "${{ github.actor }}" --password-stdin
+
+      - name: Push chart
+        if: github.event_name != 'pull_request'
+        run: |
+          # Charts go in their own namespace so they don't collide with the
+          # image packages in the same org.
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          helm push "dist/pingmailer-${{ steps.v.outputs.version }}.tgz" \
+            "oci://${{ env.REGISTRY }}/${owner}/charts"
+
+      - name: Summary
+        run: |
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          v="${{ steps.v.outputs.version }}"
+          {
+            echo "### Helm chart \`pingmailer\` $v"
+            echo
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              echo "Dry run — lint, render and package passed. Nothing pushed."
+            else
+              echo "Published to \`oci://${{ env.REGISTRY }}/${owner}/charts/pingmailer\`"
+              echo
+              echo '```bash'
+              echo "helm install pingmailer \\"
+              echo "  oci://${{ env.REGISTRY }}/${owner}/charts/pingmailer \\"
+              echo "  --version $v -n <namespace> -f my-values.yaml"
+              echo '```'
+              echo
+              echo "> New GHCR packages are **private** by default. Make the package"
+              echo "> public under Packages → pingmailer → Package settings, or"
+              echo "> consumers must \`helm registry login ghcr.io\` first."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pingmailer-chart-${{ steps.v.outputs.version }}
+          path: dist/*.tgz
