@@ -1,5 +1,5 @@
 apiVersion: v2
-name: silver-opendkim
+name: opendkim-server
 description: |
   Helm chart for the OpenDKIM milter (ghcr.io/lsflk/silver-dkim) used by the
   Pingmailer / Silver Mail stack. Generates per-domain DKIM signing keys on

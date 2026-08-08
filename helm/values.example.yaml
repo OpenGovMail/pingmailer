@@ -1,0 +1,75 @@
+# ===========================================================================
+# Example umbrella values for a real install. Copy to my-values.yaml, replace
+# every example.com / client-id placeholder, and DO NOT COMMIT the result:
+#
+#   cp helm/values.example.yaml my-values.yaml
+#   helm upgrade --install pingmailer ./helm -n pingmailer -f my-values.yaml
+#
+# This file assumes the mail domain is `example.com` and that a TLS Secret
+# named `example-com-tls` (keys tls.crt / tls.key) already exists in the
+# namespace — produced by the certbot-server chart or cert-manager.
+# ===========================================================================
+
+api-server:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: ghcr.io/silver-mail-platform/pingmailer-api-server
+    tag: "0.1.0"
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: api.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: api-example-com-tls
+        hosts:
+          - api.example.com
+  # On OpenShift, swap the two blocks above/below:
+  # ingress: { enabled: false }
+  # route:   { enabled: true, host: "" }
+
+opendkim-server:
+  enabled: true
+  domains:
+    - domain: example.com
+      selector: mail
+      keySize: 2048
+  persistence:
+    enabled: true
+    size: 256Mi
+
+raven-sasl-server:
+  enabled: true
+  config:
+    domain: example.com
+    authServerUrl: https://thunder-server:8090/auth/credentials/authenticate
+    oauth:
+      audience:
+        - your-mail-app-client-id
+  oauthEmailAuthorization:
+    your-mail-app-client-id:
+      - alerts@example.com
+      - noreply@example.com
+  tlsSecret:
+    name: example-com-tls
+
+smtp-server:
+  enabled: true
+  domain: example.com
+  hostname: mail.example.com
+  tlsSecret:
+    name: example-com-tls
+  service:
+    # ClusterIP = in-cluster only. Use LoadBalancer (cloud / MetalLB) or
+    # NodePort to receive submission traffic from outside the cluster.
+    type: ClusterIP
+  persistence:
+    spool:
+      enabled: true
+      size: 1Gi

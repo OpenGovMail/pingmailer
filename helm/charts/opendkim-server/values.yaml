@@ -4,7 +4,7 @@
 # Sensitive values (the domain list) are intentionally empty here. Provide
 # them at install/upgrade time, e.g.:
 #
-#   helm upgrade --install opendkim-server ./mail-infra/helm/opendkim-server \
+#   helm upgrade --install opendkim-server ./helm/charts/opendkim-server \
 #     --namespace pingmailer --create-namespace \
 #     -f my-domains.yaml
 #
@@ -117,7 +117,7 @@ securityContext:
     drop:
       - ALL
 
-# Required: the nsw-infra-* namespaces enforce a ResourceQuota that rejects any
+# Required: tenant namespaces commonly enforce a ResourceQuota that rejects any
 # container without CPU/memory requests and limits. opendkim is tiny.
 resources:
   requests:

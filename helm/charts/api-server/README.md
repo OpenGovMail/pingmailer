@@ -92,7 +92,7 @@ oauth2IntrospectUrl: "https://thunder.example.com/oauth2/introspect"
 ```
 
 ```bash
-helm upgrade --install api-server ./mail-infra/helm/api-server \
+helm upgrade --install api-server ./helm/charts/api-server \
   --namespace pingmailer --create-namespace \
   -f my-api-values.yaml
 ```
@@ -121,7 +121,7 @@ oauth2IntrospectUrl: "https://thunder.example.com/oauth2/introspect"
 ```
 
 ```bash
-helm upgrade --install api-server ./mail-infra/helm/api-server \
+helm upgrade --install api-server ./helm/charts/api-server \
   --namespace pingmailer --create-namespace \
   -f my-api-values-openshift.yaml
 ```

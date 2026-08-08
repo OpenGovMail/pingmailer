@@ -59,7 +59,7 @@ tlsSecret:
 ```
 
 ```bash
-helm upgrade --install smtp-server ./mail-infra/helm/smtp-server \
+helm upgrade --install smtp-server ./helm/charts/smtp-server \
   --namespace pingmailer --create-namespace \
   -f my-smtp-values.yaml
 ```

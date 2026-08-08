@@ -1,0 +1,159 @@
+# ===========================================================================
+# pingmailer — umbrella chart values
+#
+# Every top-level key below matches a subchart name under charts/. Anything
+# nested under that key is passed straight through to the subchart, so the
+# subchart's own values.yaml is the authoritative reference for each option:
+#
+#   charts/api-server/values.yaml
+#   charts/opendkim-server/values.yaml
+#   charts/raven-sasl-server/values.yaml
+#   charts/smtp-server/values.yaml
+#
+# REQUIRED VALUES — the charts fail() at render time if these are missing:
+#   opendkim-server.domains          (at least one entry)
+#   raven-sasl-server.config.domain
+#   raven-sasl-server.config.oauth.audience
+#   raven-sasl-server.oauthEmailAuthorization
+#   smtp-server.domain
+#   smtp-server.tlsSecret.name       (when submission/587 is enabled)
+#
+# NOTE ON THE MAIL DOMAIN: there is deliberately no `global.domain`. Each
+# subchart owns its own domain field so it stays installable standalone. When
+# installing the umbrella, set the SAME domain in all three places marked
+# "### MAIL DOMAIN" below.
+#
+# Copy values.example.yaml, fill it in, and keep it out of git:
+#   helm upgrade --install pingmailer ./helm -n <namespace> -f my-values.yaml
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# api-server — stateless Go relay. POST /notify, GET /healthcheck on :8000.
+# External TLS terminates at the Ingress (Kubernetes) or Route (OpenShift).
+# ---------------------------------------------------------------------------
+api-server:
+  enabled: true
+
+  replicaCount: 2
+
+  image:
+    repository: ghcr.io/silver-mail-platform/pingmailer-api-server
+    tag: ""
+    pullPolicy: Always
+
+  # Kubernetes Ingress — on by default. Replace the host with your own.
+  ingress:
+    enabled: true
+    className: ""
+    annotations: {}
+    hosts:
+      - host: api.example.com ### MAIL DOMAIN (api hostname)
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: api-tls
+        hosts:
+          - api.example.com
+
+  # OpenShift Route — set enabled=true (and ingress.enabled=false) on OpenShift.
+  route:
+    enabled: false
+    host: ""
+
+# ---------------------------------------------------------------------------
+# opendkim-server — DKIM signing milter on :8891. Keys are generated on first
+# start and persisted on a PVC; keep replicaCount at 1 (single writer).
+# ---------------------------------------------------------------------------
+opendkim-server:
+  enabled: true
+
+  image:
+    repository: ghcr.io/silver-mail-platform/silver-dkim
+    tag: latest
+
+  # REQUIRED. One entry per signing domain.
+  domains: [] ### MAIL DOMAIN
+  # - domain: example.com
+  #   selector: mail
+  #   keySize: 2048
+
+  persistence:
+    enabled: true
+    storageClass: ""
+    size: 256Mi
+
+# ---------------------------------------------------------------------------
+# raven-sasl-server — SASL / OAUTHBEARER daemon on :12345. Postfix reaches it
+# at inet:raven-sasl:12345 (the subchart pins that Service name).
+# ---------------------------------------------------------------------------
+raven-sasl-server:
+  enabled: true
+
+  image:
+    repository: ghcr.io/lsflk/raven-sasl
+    tag: latest
+
+  config:
+    domain: "" ### MAIL DOMAIN — REQUIRED
+    # Thunder credential-auth endpoint (same namespace by default).
+    authServerUrl: "https://thunder-server:8090/auth/credentials/authenticate"
+    oauth:
+      # Left empty, these derive from config.domain.
+      issuerUrl: ""
+      jwksUrl: ""
+      # REQUIRED — the OAuth client IDs whose tokens Raven will accept.
+      audience: []
+      # - your-mail-app-client-id
+
+  # REQUIRED — OAuth client_id -> the addresses that client may send as.
+  # Treat as a secret; supply from your own values file, do not commit.
+  oauthEmailAuthorization: {}
+  #   your-mail-app-client-id:
+  #     - alerts@example.com
+
+  # TLS Secret (tls.crt / tls.key) from certbot-server or cert-manager.
+  # Empty skips the /certs mount.
+  tlsSecret:
+    name: ""
+
+  # Tenant ResourceQuotas reject containers without requests+limits.
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# ---------------------------------------------------------------------------
+# smtp-server — rootless Postfix on :25 / :587. Wired to opendkim-server and
+# raven-sasl by their Service DNS names, which the subcharts pin.
+# ---------------------------------------------------------------------------
+smtp-server:
+  enabled: true
+
+  image:
+    repository: ghcr.io/silver-mail-platform/silver-smtp
+    tag: rootless
+
+  domain: "" ### MAIL DOMAIN — REQUIRED
+  hostname: "" # defaults to mail.<domain>
+
+  # REQUIRED while submission/587 is enabled — Secret holding tls.crt/tls.key.
+  tlsSecret:
+    name: ""
+
+  service:
+    # ClusterIP is in-cluster only. Use LoadBalancer or NodePort to accept
+    # mail from outside — an Ingress/Route cannot carry SMTP. See
+    # charts/smtp-server/values.yaml for the full trade-off.
+    type: ClusterIP
+    smtpPort: 25
+    submissionPort: 587
+
+  persistence:
+    spool:
+      enabled: true
+      storageClass: ""
+      size: 1Gi

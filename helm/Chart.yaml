@@ -1,0 +1,55 @@
+apiVersion: v2
+name: pingmailer
+description: |
+  Umbrella Helm chart for the Pingmailer / Silver Mail stack. Installs the
+  four services that make up a working outbound mail platform as a single
+  release:
+
+    * api-server        — Go HTTP relay (POST /notify) on :8000
+    * opendkim-server   — OpenDKIM milter on :8891, keys persisted on a PVC
+    * raven-sasl-server — Dovecot-compatible SASL/OAUTHBEARER daemon on :12345
+    * smtp-server       — Postfix (rootless) on :25 / :587
+
+  Each service remains a self-contained subchart under charts/ and can still be
+  installed on its own. Every subchart is disabled/enabled independently via
+  `<name>.enabled` so you can roll out the stack piecemeal.
+
+  TLS certificates are NOT part of this chart — deploy the certbot-server chart
+  (mail-infra/helm/certbot-server) or cert-manager first and point
+  `smtp-server.tlsSecret.name` / `raven-sasl-server.tlsSecret.name` at the
+  resulting Secret.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - pingmailer
+  - silver
+  - mail
+  - smtp
+  - postfix
+  - opendkim
+  - sasl
+  - kubernetes
+  - openshift
+maintainers:
+  - name: LSFLK
+    url: https://github.com/lsflk
+sources:
+  - https://github.com/LSFLK/silver
+dependencies:
+  - name: api-server
+    version: 0.1.0
+    repository: ""
+    condition: api-server.enabled
+  - name: opendkim-server
+    version: 0.1.0
+    repository: ""
+    condition: opendkim-server.enabled
+  - name: raven-sasl-server
+    version: 0.1.0
+    repository: ""
+    condition: raven-sasl-server.enabled
+  - name: smtp-server
+    version: 0.1.0
+    repository: ""
+    condition: smtp-server.enabled

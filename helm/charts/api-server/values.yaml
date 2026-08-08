@@ -10,8 +10,8 @@
 #   - Kubernetes: use Ingress (NGINX, Traefik, etc.) — enabled by default
 #   - OpenShift:  use Route (optional) — disabled by default
 #
-#   helm upgrade --install api-server ./mail-infra/helm/api-server \
-#     --namespace nsw-infra-prod -f my-api-values.yaml
+#   helm upgrade --install api-server ./helm/charts/api-server \
+#     --namespace <namespace> -f my-api-values.yaml
 # ---------------------------------------------------------------------------
 
 nameOverride: ""
@@ -89,7 +89,7 @@ oauth2IntrospectUrl: ""
 extraEnv: []
 existingSecret: ""
 
-# Required by the nsw-infra-* tenant-quota (rejects containers without both).
+# Required by tenant ResourceQuotas that reject containers without both.
 resources:
   requests:
     cpu: 50m
@@ -97,6 +97,30 @@ resources:
   limits:
     cpu: 500m
     memory: 256Mi
+
+# ---------------------------------------------------------------------------
+# Extra /etc/hosts entries for the pod.
+#
+# Why this exists: callers pass `smtp_host` in the /notify body, and the
+# api-server verifies the SMTP server's TLS certificate against that name. The
+# mail cert is issued for the mail domain (e.g. `mail.example.com`), NOT for
+# the Kubernetes Service name `smtp-server` — so `smtp_host: smtp-server` fails
+# with `x509: certificate is valid for *.example.com, example.com, not
+# smtp-server`. Pointing callers at the public `mail.example.com` fails too,
+# because a cluster usually cannot hairpin out to its own public IP
+# (`dial tcp <public-ip>:587: i/o timeout`).
+#
+# Mapping the cert-matching name to the SMTP Service ClusterIP fixes both:
+# callers use `smtp_host: mail.example.com` and TLS verification passes.
+#
+# NOTE: this pins a ClusterIP. If the smtp-server Service is deleted and
+# recreated it gets a new address and this must be updated. Read it with:
+#   kubectl -n <ns> get svc smtp-server -o jsonpath='{.spec.clusterIP}'
+# ---------------------------------------------------------------------------
+hostAliases: []
+# - ip: 10.96.0.42          # the smtp-server Service ClusterIP
+#   hostnames:
+#     - mail.example.com
 
 # Nothing is pinned: OpenShift's restricted-v2 SCC assigns an arbitrary
 # non-root UID/fsGroup from the namespace range (the image's USER 1000 would
