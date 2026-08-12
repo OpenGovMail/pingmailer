@@ -1,8 +1,8 @@
-{{- define "opengovmail-smtp.name" -}}
+{{- define "pingmailer-smtp.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{- define "opengovmail-smtp.fullname" -}}
+{{- define "pingmailer-smtp.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -15,13 +15,13 @@
 {{- end }}
 {{- end }}
 
-{{- define "opengovmail-smtp.chart" -}}
+{{- define "pingmailer-smtp.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{- define "opengovmail-smtp.labels" -}}
-helm.sh/chart: {{ include "opengovmail-smtp.chart" . }}
-{{ include "opengovmail-smtp.selectorLabels" . }}
+{{- define "pingmailer-smtp.labels" -}}
+helm.sh/chart: {{ include "pingmailer-smtp.chart" . }}
+{{ include "pingmailer-smtp.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -29,14 +29,14 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/component: smtp
 {{- end }}
 
-{{- define "opengovmail-smtp.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "opengovmail-smtp.name" . }}
+{{- define "pingmailer-smtp.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "pingmailer-smtp.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{- define "opengovmail-smtp.serviceAccountName" -}}
+{{- define "pingmailer-smtp.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "opengovmail-smtp.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "pingmailer-smtp.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
@@ -45,7 +45,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{/*
 Resolved postfix hostname: explicit `hostname` value, or `mail.<domain>`.
 */}}
-{{- define "opengovmail-smtp.hostname" -}}
+{{- define "pingmailer-smtp.hostname" -}}
 {{- if .Values.hostname -}}
 {{ .Values.hostname }}
 {{- else -}}
@@ -56,10 +56,10 @@ mail.{{ required "domain is required" .Values.domain }}
 {{/*
 PVC claim name for the postfix spool.
 */}}
-{{- define "opengovmail-smtp.spoolClaim" -}}
+{{- define "pingmailer-smtp.spoolClaim" -}}
 {{- if .Values.persistence.spool.existingClaim }}
 {{- .Values.persistence.spool.existingClaim }}
 {{- else }}
-{{- printf "%s-spool" (include "opengovmail-smtp.fullname" .) }}
+{{- printf "%s-spool" (include "pingmailer-smtp.fullname" .) }}
 {{- end }}
 {{- end }}

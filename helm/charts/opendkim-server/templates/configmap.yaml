@@ -5,9 +5,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "opengovmail-opendkim.fullname" . }}-conf
+  name: {{ include "pingmailer-opendkim.fullname" . }}-conf
   labels:
-    {{- include "opengovmail-opendkim.labels" . | nindent 4 }}
+    {{- include "pingmailer-opendkim.labels" . | nindent 4 }}
 data:
   opendkim.conf: |
     AutoRestart             {{ .Values.opendkim.autoRestart }}
@@ -60,7 +60,7 @@ data:
     {{ $selector }}._domainkey.{{ .domain }} {{ .domain }}:{{ $selector }}:/etc/dkimkeys/{{ .domain }}/{{ $selector }}.private
     {{- end }}
 
-  opengovmail.yaml: |
+  pingmailer.yaml: |
     domains:
     {{- range .Values.domains }}
       - domain: {{ .domain }}

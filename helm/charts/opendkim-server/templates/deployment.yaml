@@ -1,29 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "opengovmail-opendkim.fullname" . }}
+  name: {{ include "pingmailer-opendkim.fullname" . }}
   labels:
-    {{- include "opengovmail-opendkim.labels" . | nindent 4 }}
+    {{- include "pingmailer-opendkim.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   strategy:
     type: Recreate            # PVC is RWO and DKIM is singleton — avoid rolling.
   selector:
     matchLabels:
-      {{- include "opengovmail-opendkim.selectorLabels" . | nindent 6 }}
+      {{- include "pingmailer-opendkim.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "opengovmail-opendkim.selectorLabels" . | nindent 8 }}
+        {{- include "pingmailer-opendkim.selectorLabels" . | nindent 8 }}
       annotations:
         # Roll the pod when the ConfigMap (and therefore opendkim.conf /
-        # KeyTable / SigningTable / TrustedHosts / opengovmail.yaml) changes.
+        # KeyTable / SigningTable / TrustedHosts / pingmailer.yaml) changes.
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      serviceAccountName: {{ include "opengovmail-opendkim.serviceAccountName" . }}
+      serviceAccountName: {{ include "pingmailer-opendkim.serviceAccountName" . }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -62,8 +62,8 @@ spec:
               subPath: TrustedHosts
               readOnly: true
             - name: config
-              mountPath: /etc/opendkim/opengovmail.yaml
-              subPath: opengovmail.yaml
+              mountPath: /etc/opendkim/pingmailer.yaml
+              subPath: pingmailer.yaml
               readOnly: true
             - name: keys
               mountPath: /etc/dkimkeys
@@ -88,11 +88,11 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: {{ include "opengovmail-opendkim.fullname" . }}-conf
+            name: {{ include "pingmailer-opendkim.fullname" . }}-conf
         - name: keys
           {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ include "opengovmail-opendkim.claimName" . }}
+            claimName: {{ include "pingmailer-opendkim.claimName" . }}
           {{- else }}
           emptyDir: {}
           {{- end }}

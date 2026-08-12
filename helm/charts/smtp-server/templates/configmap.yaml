@@ -2,27 +2,27 @@
 {{- fail "domain is required — pass via -f my-values.yaml or --set domain=example.com" }}
 {{- end }}
 {{- if and .Values.postfix.submission.enabled (not .Values.tlsSecret.name) }}
-{{- fail "tlsSecret.name is required when postfix.submission.enabled=true (submission/587 enforces STARTTLS). Point this at a cert-manager Secret produced by the opengovmail-certificates chart." }}
+{{- fail "tlsSecret.name is required when postfix.submission.enabled=true (submission/587 enforces STARTTLS). Point this at a cert-manager Secret produced by the pingmailer-certificates chart." }}
 {{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "opengovmail-smtp.fullname" . }}-conf
+  name: {{ include "pingmailer-smtp.fullname" . }}-conf
   labels:
-    {{- include "opengovmail-smtp.labels" . | nindent 4 }}
+    {{- include "pingmailer-smtp.labels" . | nindent 4 }}
 data:
-  opengovmail.yaml: |
+  pingmailer.yaml: |
     domains:
       - domain: {{ .Values.domain }}
 
   main.cf: |
     # ===========================================================
-    # main.cf — rendered by the opengovmail-smtp Helm chart
+    # main.cf — rendered by the pingmailer-smtp Helm chart
     # ===========================================================
 
     # --- Identity ---
-    myhostname = {{ include "opengovmail-smtp.hostname" . }}
+    myhostname = {{ include "pingmailer-smtp.hostname" . }}
     mydomain = {{ .Values.domain }}
     myorigin = $mydomain
     mydestination = localhost.localdomain, localhost
@@ -84,7 +84,7 @@ data:
 
   master.cf: |
     # ===========================================================
-    # master.cf — rendered by the opengovmail-smtp Helm chart
+    # master.cf — rendered by the pingmailer-smtp Helm chart
     #
     # chroot column is "n" for every service (chroot is redundant in a container
     # and needs CAP_SYS_CHROOT). The smtp/submission listeners use HIGH ports

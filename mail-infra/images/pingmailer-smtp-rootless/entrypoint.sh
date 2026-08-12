@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-CONFIG_FILE="/etc/postfix/opengovmail.yaml"
+CONFIG_FILE="/etc/postfix/pingmailer.yaml"
 
-# --- domain from opengovmail.yaml -------------------------------------------------
+# --- domain from pingmailer.yaml -------------------------------------------------
 MAIL_DOMAIN=$(awk '/^[[:space:]]*-[[:space:]]*domain:/ {sub(/^[[:space:]]*-[[:space:]]*domain:[[:space:]]*/, ""); print; exit}' "$CONFIG_FILE")
 if [ -z "$MAIL_DOMAIN" ] || [ "$MAIL_DOMAIN" = "null" ]; then
     echo "⚠️  Could not extract domain from $CONFIG_FILE; using example.org"

@@ -8,20 +8,20 @@ set -euo pipefail # Exit on error, undefined vars, or failed pipe
 
 # --- Paths ---
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ROOT_DIR="$(dirname "$SCRIPT_DIR")"       # /root/opengovmail/services
-GEN_DIR="${ROOT_DIR}/opengovmail-config/raven" # Base path
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"       # /root/pingmailer/services
+GEN_DIR="${ROOT_DIR}/pingmailer-config/raven" # Base path
 
-CONFIG_FILE="${ROOT_DIR}/../conf/opengovmail.yaml"
+CONFIG_FILE="${ROOT_DIR}/../conf/pingmailer.yaml"
 OUTPUT_FILE="${GEN_DIR}/conf/raven.yaml"
 
-# --- Extract primary (first) domain from opengovmail.yaml ---
+# --- Extract primary (first) domain from pingmailer.yaml ---
 # Look for the first domain entry under the domains list
 MAIL_DOMAIN=$(grep -m 1 '^\s*-\s*domain:' "$CONFIG_FILE" | sed 's/.*domain:\s*//' | xargs)
 MAIL_DOMAIN=${MAIL_DOMAIN:-example.local}
 
 # --- Certificate paths ---
-LETSENCRYPT_PATH="${ROOT_DIR}/opengovmail-config/certbot/keys/etc/live/${MAIL_DOMAIN}"
-RAVEN_CERT_PATH="${ROOT_DIR}/opengovmail-config/raven/certs"
+LETSENCRYPT_PATH="${ROOT_DIR}/pingmailer-config/certbot/keys/etc/live/${MAIL_DOMAIN}"
+RAVEN_CERT_PATH="${ROOT_DIR}/pingmailer-config/raven/certs"
 
 # --- Create necessary directories ---
 mkdir -p "$(dirname "$OUTPUT_FILE")"

@@ -40,18 +40,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: opengovmail-api-server
+          - name: pingmailer-api-server
             context: ./api-server
             dockerfile: ./api-server/Dockerfile
             # Static Go binary — cross-compiles cheaply, so build wide.
             platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/ppc64le,linux/s390x
-          - name: opengovmail-dkim
-            context: ./mail-infra/images/opengovmail-dkim
-            dockerfile: ./mail-infra/images/opengovmail-dkim/Dockerfile
+          - name: pingmailer-dkim
+            context: ./mail-infra/images/pingmailer-dkim
+            dockerfile: ./mail-infra/images/pingmailer-dkim/Dockerfile
             platforms: linux/amd64,linux/arm64
-          - name: opengovmail-smtp
-            context: ./mail-infra/images/opengovmail-smtp-rootless
-            dockerfile: ./mail-infra/images/opengovmail-smtp-rootless/Dockerfile
+          - name: pingmailer-smtp
+            context: ./mail-infra/images/pingmailer-smtp-rootless
+            dockerfile: ./mail-infra/images/pingmailer-smtp-rootless/Dockerfile
             # This image rebuilds Postfix from source; every extra platform is
             # a full compile under QEMU emulation. Keep the list tight.
             platforms: linux/amd64,linux/arm64

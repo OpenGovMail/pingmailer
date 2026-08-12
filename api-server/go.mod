@@ -1,4 +1,4 @@
-module github.com/OpenGovMail/opengovmail
+module github.com/OpenGovMail/pingmailer
 
 go 1.23
 

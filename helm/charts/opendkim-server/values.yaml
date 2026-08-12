@@ -1,11 +1,11 @@
 # ---------------------------------------------------------------------------
-# opengovmail-opendkim values
+# pingmailer-opendkim values
 #
 # Sensitive values (the domain list) are intentionally empty here. Provide
 # them at install/upgrade time, e.g.:
 #
 #   helm upgrade --install opendkim-server ./helm/charts/opendkim-server \
-#     --namespace opengovmail --create-namespace \
+#     --namespace pingmailer --create-namespace \
 #     -f my-domains.yaml
 #
 # Where my-domains.yaml contains:
@@ -25,8 +25,8 @@ replicaCount: 1   # MUST stay 1 — DKIM keys live on a single-writer PVC.
 image:
   # OpenShift-compatible image: entrypoint is world-executable and writable
   # dirs are group-owned by GID 0, so it runs under an arbitrary non-root UID.
-  # Built from mail-infra/images/opengovmail-dkim.
-  repository: ghcr.io/opengovmail/opengovmail-dkim
+  # Built from mail-infra/images/pingmailer-dkim.
+  repository: ghcr.io/opengovmail/pingmailer-dkim
   tag: latest
   pullPolicy: Always
 
@@ -81,7 +81,7 @@ service:
   port: 8891
 
 # ---------------------------------------------------------------------------
-# Persistent storage for /etc/dkimkeys. opengovmail-dkim generates per-domain
+# Persistent storage for /etc/dkimkeys. pingmailer-dkim generates per-domain
 # private keys here on first start and reuses them across restarts.
 #
 # Trade-off vs storing keys in a Secret:

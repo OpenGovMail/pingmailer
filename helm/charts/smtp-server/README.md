@@ -1,19 +1,19 @@
-# opengovmail-smtp Helm chart
+# pingmailer-smtp Helm chart
 
-Helm chart for the Postfix-based SMTP server (`ghcr.io/opengovmail/opengovmail-smtp`) —
+Helm chart for the Postfix-based SMTP server (`ghcr.io/opengovmail/pingmailer-smtp`) —
 the Kubernetes counterpart of the `smtp-server` block in this repo's
 [docker-compose.yml](../../../docker-compose.yml).
 
-This is the third of four OpenGovMail mail-plane charts. Install order:
+This is the third of four Pingmailer mail-plane charts. Install order:
 
-1. [opengovmail-certificates](../certbot-server/) — issues TLS certs via cert-manager.
-2. [opengovmail-opendkim](../opendkim-server/) — DKIM milter on `:8891`.
-3. [opengovmail-raven-sasl](../raven-sasl-server/) — SASL auth daemon on `:12345`.
-4. **opengovmail-smtp** (this chart) — Postfix on `:25` (+ optional submission `:587`).
+1. [pingmailer-certificates](../certbot-server/) — issues TLS certs via cert-manager.
+2. [pingmailer-opendkim](../opendkim-server/) — DKIM milter on `:8891`.
+3. [pingmailer-raven-sasl](../raven-sasl-server/) — SASL auth daemon on `:12345`.
+4. **pingmailer-smtp** (this chart) — Postfix on `:25` (+ optional submission `:587`).
 
 ## What this chart deploys
 
-- A `ConfigMap` that templates `main.cf`, `master.cf`, `opengovmail.yaml`, and
+- A `ConfigMap` that templates `main.cf`, `master.cf`, `pingmailer.yaml`, and
   `recipient_access` from your values. The docker-compose flow renders
   these via a host-side `gen-postfix-conf.sh`; the chart does it in Helm.
 - A `Deployment` whose **init container**:
@@ -55,12 +55,12 @@ Sensitive values stay out of `values.yaml`:
 # my-smtp-values.yaml
 domain: mail.example.com
 tlsSecret:
-  name: mail-example-com-tls    # produced by the opengovmail-certificates chart
+  name: mail-example-com-tls    # produced by the pingmailer-certificates chart
 ```
 
 ```bash
 helm upgrade --install smtp-server ./helm/charts/smtp-server \
-  --namespace opengovmail --create-namespace \
+  --namespace pingmailer --create-namespace \
   -f my-smtp-values.yaml
 ```
 
@@ -148,7 +148,7 @@ support case to unblock 25.
 ## Uninstall
 
 ```bash
-helm uninstall smtp-server -n opengovmail
+helm uninstall smtp-server -n pingmailer
 ```
 
 The spool PVC is preserved (in-flight mail). Delete it explicitly to

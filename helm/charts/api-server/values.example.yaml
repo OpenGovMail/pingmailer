@@ -1,8 +1,8 @@
-# Minimal overrides for the opengovmail-api-server chart.
+# Minimal overrides for the pingmailer-api-server chart.
 # Copy to a private file (e.g. my-api-values.yaml) and DO NOT commit.
 #
 #   helm upgrade --install api-server ./helm/charts/api-server \
-#     --namespace opengovmail --create-namespace \
+#     --namespace pingmailer --create-namespace \
 #     -f my-api-values.yaml
 
 # ============================================================================
@@ -10,7 +10,7 @@
 # cluster can reach. See README for build/push commands.
 # ============================================================================
 image:
-  repository: "ghcr.io/<your-org>/opengovmail-api-server"
+  repository: "ghcr.io/<your-org>/pingmailer-api-server"
   tag: "0.1.0"
 
 # ============================================================================

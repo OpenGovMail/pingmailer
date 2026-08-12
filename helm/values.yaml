@@ -1,5 +1,5 @@
 # ===========================================================================
-# opengovmail — umbrella chart values
+# pingmailer — umbrella chart values
 #
 # Every top-level key below matches a subchart name under charts/. Anything
 # nested under that key is passed straight through to the subchart, so the
@@ -24,7 +24,7 @@
 # "### MAIL DOMAIN" below.
 #
 # Copy values.example.yaml, fill it in, and keep it out of git:
-#   helm upgrade --install opengovmail ./helm -n <namespace> -f my-values.yaml
+#   helm upgrade --install pingmailer ./helm -n <namespace> -f my-values.yaml
 # ===========================================================================
 
 # ---------------------------------------------------------------------------
@@ -37,7 +37,7 @@ api-server:
   replicaCount: 2
 
   image:
-    repository: ghcr.io/opengovmail/opengovmail-api-server
+    repository: ghcr.io/opengovmail/pingmailer-api-server
     tag: ""
     pullPolicy: Always
 
@@ -69,7 +69,7 @@ opendkim-server:
   enabled: true
 
   image:
-    repository: ghcr.io/opengovmail/opengovmail-dkim
+    repository: ghcr.io/opengovmail/pingmailer-dkim
     tag: latest
 
   # REQUIRED. One entry per signing domain.
@@ -134,7 +134,7 @@ smtp-server:
   enabled: true
 
   image:
-    repository: ghcr.io/opengovmail/opengovmail-smtp
+    repository: ghcr.io/opengovmail/pingmailer-smtp
     tag: rootless
 
   domain: "" ### MAIL DOMAIN — REQUIRED

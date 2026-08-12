@@ -1,4 +1,4 @@
-opengovmail-certificates has been installed.
+pingmailer-certificates has been installed.
 
 Release:   {{ .Release.Name }}
 Namespace: {{ .Release.Namespace }}

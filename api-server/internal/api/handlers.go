@@ -8,7 +8,7 @@ import (
 	"net/mail"
 	"strconv"
 
-	"github.com/OpenGovMail/opengovmail/internal/emailer"
+	"github.com/OpenGovMail/pingmailer/internal/emailer"
 )
 
 // handleHealth provides a simple health check endpoint

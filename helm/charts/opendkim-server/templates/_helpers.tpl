@@ -1,14 +1,14 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "opengovmail-opendkim.name" -}}
+{{- define "pingmailer-opendkim.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Fully qualified app name.
 */}}
-{{- define "opengovmail-opendkim.fullname" -}}
+{{- define "pingmailer-opendkim.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -24,16 +24,16 @@ Fully qualified app name.
 {{/*
 Chart label.
 */}}
-{{- define "opengovmail-opendkim.chart" -}}
+{{- define "pingmailer-opendkim.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels.
 */}}
-{{- define "opengovmail-opendkim.labels" -}}
-helm.sh/chart: {{ include "opengovmail-opendkim.chart" . }}
-{{ include "opengovmail-opendkim.selectorLabels" . }}
+{{- define "pingmailer-opendkim.labels" -}}
+helm.sh/chart: {{ include "pingmailer-opendkim.chart" . }}
+{{ include "pingmailer-opendkim.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -44,17 +44,17 @@ app.kubernetes.io/component: opendkim
 {{/*
 Selector labels.
 */}}
-{{- define "opengovmail-opendkim.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "opengovmail-opendkim.name" . }}
+{{- define "pingmailer-opendkim.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "pingmailer-opendkim.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Service account name.
 */}}
-{{- define "opengovmail-opendkim.serviceAccountName" -}}
+{{- define "pingmailer-opendkim.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "opengovmail-opendkim.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "pingmailer-opendkim.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
@@ -63,11 +63,11 @@ Service account name.
 {{/*
 PVC claim name (existing or chart-managed).
 */}}
-{{- define "opengovmail-opendkim.claimName" -}}
+{{- define "pingmailer-opendkim.claimName" -}}
 {{- if .Values.persistence.existingClaim }}
 {{- .Values.persistence.existingClaim }}
 {{- else }}
-{{- printf "%s-keys" (include "opengovmail-opendkim.fullname" .) }}
+{{- printf "%s-keys" (include "pingmailer-opendkim.fullname" .) }}
 {{- end }}
 {{- end }}
 
@@ -75,7 +75,7 @@ PVC claim name (existing or chart-managed).
 Normalize a single domain entry to a dict with domain/selector/keySize.
 Pass the entry as the context.
 */}}
-{{- define "opengovmail-opendkim.domain" -}}
+{{- define "pingmailer-opendkim.domain" -}}
 {{- $entry := . -}}
 {{- $selector := default "mail" $entry.selector -}}
 {{- $keySize := default 2048 $entry.keySize -}}

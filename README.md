@@ -1,10 +1,10 @@
-# OpenGovMail
+# PingMailer
 **_Simple Email Service for Transactional Emails_**
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-![Last Commit](https://img.shields.io/github/last-commit/OpenGovMail/opengovmail)
+![Last Commit](https://img.shields.io/github/last-commit/OpenGovMail/pingmailer)
 
-**OpenGovMail** is a lightweight service for sending transactional emails. It provides a simple REST API for email delivery over SMTP, backed by its own Postfix/OpenDKIM mail infrastructure.
+**PingMailer** is a lightweight service for sending transactional emails. It provides a simple REST API for email delivery using SMTP, powered by its own Postfix/OpenDKIM mail infrastructure.
 
 <p align="center">
   •   <a href="#features">Features</a> •
@@ -17,7 +17,7 @@
 
 - **Simple REST API** – Send emails via HTTPS requests
 - **Template Support** – Pre-built email templates for common use cases
-- **SMTP Integration** – Works with any SMTP server or OpenGovMail instance
+- **SMTP Integration** – Works with any SMTP server or PingMailer instance
 - **Lightweight** – Minimal resource footprint
 - **Dockerized** – Easy deployment with Docker Compose
 
@@ -25,14 +25,14 @@
 
 ### Prerequisites
 - Docker and Docker Compose installed
-- SMTP server credentials (or a running OpenGovMail instance)
+- SMTP server credentials (or a running PingMailer instance)
 
 ### Quick Start
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/OpenGovMail/opengovmail.git
-   cd opengovmail
+   git clone https://github.com/OpenGovMail/pingmailer.git
+   cd pingmailer
    ```
 
 2. **Set up the mail infrastructure**
@@ -40,9 +40,9 @@
    bash mail-infra/scripts/setup/setup.sh
    ```
 
-3. **Start the OpenGovMail mail server**
+3. **Start the PingMailer mail server**
    ```bash
-   bash mail-infra/scripts/service/start-opengovmail.sh
+   bash mail-infra/scripts/service/start-pingmailer.sh
    ```
 
 4. **Configure the API server**
@@ -81,10 +81,10 @@
 
 ## Architecture
 
-OpenGovMail consists of two main components:
+PingMailer consists of two main components:
 
 - **`api-server/`** - Go-based REST API server for sending templated emails
-- **`mail-infra/`** - OpenGovMail SMTP components for outgoing mail delivery
+- **`mail-infra/`** - PingMailer SMTP components for outgoing mail delivery
 
 The API server accepts HTTPS requests and forwards emails through the configured SMTP server. Email templates are stored in `api-server/internal/emailer/templates/`.
 

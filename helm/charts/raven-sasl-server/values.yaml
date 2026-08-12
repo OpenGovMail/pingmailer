@@ -1,11 +1,11 @@
 # ---------------------------------------------------------------------------
-# opengovmail-raven-sasl values
+# pingmailer-raven-sasl values
 #
 # Sensitive values (mail domain, OAuth audience, email allowlist, TLS secret
 # name) are intentionally empty here. Supply them at install/upgrade time:
 #
 #   helm upgrade --install raven-sasl ./helm/charts/raven-sasl-server \
-#     --namespace opengovmail --create-namespace \
+#     --namespace pingmailer --create-namespace \
 #     -f my-raven-values.yaml
 #
 # Where my-raven-values.yaml contains the secrets (DO NOT commit).
@@ -73,7 +73,7 @@ oauthEmailAuthorization: {}
 #     - noreply@example.com
 
 # ---------------------------------------------------------------------------
-# TLS certs mounted at /certs (compatible with the opengovmail-certificates chart,
+# TLS certs mounted at /certs (compatible with the pingmailer-certificates chart,
 # which produces Secrets named <dash-domain>-tls with tls.crt + tls.key).
 #
 # Leave .name empty to skip the mount entirely. Set .alreadyRenamed=true if

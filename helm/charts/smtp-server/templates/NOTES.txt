@@ -1,11 +1,11 @@
-opengovmail-smtp has been installed.
+pingmailer-smtp has been installed.
 
 Release:   {{ .Release.Name }}
 Namespace: {{ .Release.Namespace }}
-Hostname:  {{ include "opengovmail-smtp.hostname" . }}
+Hostname:  {{ include "pingmailer-smtp.hostname" . }}
 Domain:    {{ .Values.domain }}
 
-Service:   {{ include "opengovmail-smtp.fullname" . }}
+Service:   {{ include "pingmailer-smtp.fullname" . }}
   SMTP:       :{{ .Values.service.smtpPort }}
   {{- if .Values.postfix.submission.enabled }}
   Submission: :{{ .Values.service.submissionPort }}
@@ -13,7 +13,7 @@ Service:   {{ include "opengovmail-smtp.fullname" . }}
 
 ----- 1. Check the pod is up -----
 
-  kubectl -n {{ .Release.Namespace }} logs -f deploy/{{ include "opengovmail-smtp.fullname" . }}
+  kubectl -n {{ .Release.Namespace }} logs -f deploy/{{ include "pingmailer-smtp.fullname" . }}
   kubectl -n {{ .Release.Namespace }} get pod -l app.kubernetes.io/instance={{ .Release.Name }}
 
 ----- 2. Service exposure -----
@@ -35,11 +35,11 @@ Type: {{ .Values.service.type }}
 
   Watch the LoadBalancer get its address (stays <pending> if the cluster has
   no L4 LB provider — fall back to NodePort in that case):
-    kubectl -n {{ .Release.Namespace }} get svc {{ include "opengovmail-smtp.fullname" . }} -w
+    kubectl -n {{ .Release.Namespace }} get svc {{ include "pingmailer-smtp.fullname" . }} -w
 
   Then publish DNS:
-    MX  {{ .Values.domain }}.  10  {{ include "opengovmail-smtp.hostname" . }}.
-    A   {{ include "opengovmail-smtp.hostname" . }}.   <load-balancer-ip>
+    MX  {{ .Values.domain }}.  10  {{ include "pingmailer-smtp.hostname" . }}.
+    A   {{ include "pingmailer-smtp.hostname" . }}.   <load-balancer-ip>
 
   Test from outside:
     openssl s_client -starttls smtp -connect <load-balancer-ip>:{{ .Values.service.submissionPort }}
@@ -47,7 +47,7 @@ Type: {{ .Values.service.type }}
 {{- else if eq .Values.service.type "NodePort" }}
 
   Find the assigned node ports:
-    kubectl -n {{ .Release.Namespace }} get svc {{ include "opengovmail-smtp.fullname" . }} \
+    kubectl -n {{ .Release.Namespace }} get svc {{ include "pingmailer-smtp.fullname" . }} \
       -o jsonpath='{range .spec.ports[*]}{.name}={.nodePort}{"\n"}{end}'
 
   Connect from outside to <any-node-ip>:<submission-nodePort>. Have your
@@ -58,22 +58,22 @@ Type: {{ .Values.service.type }}
 
 ----- 3. Dependencies (charts you should already have installed) -----
 
-  opengovmail-opendkim      (Service: opendkim-server:8891)
-  opengovmail-raven-sasl    (Service: raven-sasl:12345)
-  opengovmail-certificates  (TLS Secret: {{ .Values.tlsSecret.name | default "(not set)" }})
+  pingmailer-opendkim      (Service: opendkim-server:8891)
+  pingmailer-raven-sasl    (Service: raven-sasl:12345)
+  pingmailer-certificates  (TLS Secret: {{ .Values.tlsSecret.name | default "(not set)" }})
 
 ----- 4. Mail queue -----
 
-The Postfix mail queue lives on the PVC `{{ include "opengovmail-smtp.spoolClaim" . }}`
+The Postfix mail queue lives on the PVC `{{ include "pingmailer-smtp.spoolClaim" . }}`
 ({{ .Values.persistence.spool.size }}). Survives `helm uninstall`; delete
 explicitly to discard in-flight mail:
 
-  kubectl -n {{ .Release.Namespace }} delete pvc {{ include "opengovmail-smtp.spoolClaim" . }}
+  kubectl -n {{ .Release.Namespace }} delete pvc {{ include "pingmailer-smtp.spoolClaim" . }}
 
 ----- 5. Smoke-test SMTP -----
 
   kubectl -n {{ .Release.Namespace }} run -it --rm tmp --image=busybox --restart=Never -- \
-    sh -c 'nc -v {{ include "opengovmail-smtp.fullname" . }} {{ .Values.service.smtpPort }} <<EOF
+    sh -c 'nc -v {{ include "pingmailer-smtp.fullname" . }} {{ .Values.service.smtpPort }} <<EOF
   EHLO test
   QUIT
   EOF'

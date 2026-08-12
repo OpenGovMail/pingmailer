@@ -1,7 +1,7 @@
 apiVersion: v2
-name: opengovmail
+name: pingmailer
 description: |
-  Umbrella Helm chart for the OpenGovMail stack. Installs the
+  Umbrella Helm chart for the PingMailer stack. Installs the
   four services that make up a working outbound mail platform as a single
   release:
 
@@ -22,7 +22,7 @@ type: application
 version: 0.1.0
 appVersion: "0.1.0"
 keywords:
-  - opengovmail
+  - pingmailer
   - mail
   - smtp
   - postfix
@@ -34,7 +34,7 @@ maintainers:
   - name: OpenGovMail
     url: https://github.com/OpenGovMail
 sources:
-  - https://github.com/OpenGovMail/opengovmail
+  - https://github.com/OpenGovMail/pingmailer
 dependencies:
   - name: api-server
     version: 0.1.0

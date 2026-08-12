@@ -2,12 +2,12 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "opengovmail-api-server.fullname" . }}
+  name: {{ include "pingmailer-api-server.fullname" . }}
   labels:
-    {{- include "opengovmail-api-server.labels" . | nindent 4 }}
+    {{- include "pingmailer-api-server.labels" . | nindent 4 }}
 spec:
   minAvailable: {{ .Values.pdb.minAvailable }}
   selector:
     matchLabels:
-      {{- include "opengovmail-api-server.selectorLabels" . | nindent 6 }}
+      {{- include "pingmailer-api-server.selectorLabels" . | nindent 6 }}
 {{- end }}

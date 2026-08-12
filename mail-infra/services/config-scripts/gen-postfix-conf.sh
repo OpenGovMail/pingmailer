@@ -8,14 +8,14 @@ set -euo pipefail
 # Define constant paths
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly ROOT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
-readonly OPENGOVMAIL_YAML_FILE="${ROOT_DIR}/conf/opengovmail.yaml"
-readonly CONFIGS_PATH="${ROOT_DIR}/services/opengovmail-config/postfix"
+readonly PINGMAILER_YAML_FILE="${ROOT_DIR}/conf/pingmailer.yaml"
+readonly CONFIGS_PATH="${ROOT_DIR}/services/pingmailer-config/postfix"
 readonly DKIM_SELECTOR=mail
 
 # --- Main Logic ---
-# Extract primary (first) domain from the domains list in opengovmail.yaml
-readonly MAIL_DOMAIN=$(grep -m 1 '^\s*-\s*domain:' "${OPENGOVMAIL_YAML_FILE}" | sed 's/.*domain:\s*//' | xargs)
-#export RELAYHOST=$(yq -e '.relayhost' "$OPENGOVMAIL_YAML_FILE" || echo "")
+# Extract primary (first) domain from the domains list in pingmailer.yaml
+readonly MAIL_DOMAIN=$(grep -m 1 '^\s*-\s*domain:' "${PINGMAILER_YAML_FILE}" | sed 's/.*domain:\s*//' | xargs)
+#export RELAYHOST=$(yq -e '.relayhost' "$PINGMAILER_YAML_FILE" || echo "")
 
 # --- Derived variables ---
 MAIL_HOSTNAME=${MAIL_HOSTNAME:-mail.$MAIL_DOMAIN}
