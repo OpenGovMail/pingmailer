@@ -34,12 +34,12 @@ fi
 
 # Step 1: Stop all containers using docker compose
 echo -e "\n${YELLOW}Step 1/3: Stopping Docker containers${NC}"
-echo "  - Stopping OpenGovMail services and API Endpoint..."
+echo "  - Stopping PingMailer services and API Endpoint..."
 (cd "${ROOT_DIR}" && docker compose down)
 if [ $? -eq 0 ]; then
-    echo -e "${GREEN}  ✓ OpenGovMail services stopped successfully${NC}"
+    echo -e "${GREEN}  ✓ PingMailer services stopped successfully${NC}"
 else
-    echo -e "${RED}  ✗ Failed to stop OpenGovMail services${NC}"
+    echo -e "${RED}  ✗ Failed to stop PingMailer services${NC}"
 fi
 
 # Step 2: Remove all volumes

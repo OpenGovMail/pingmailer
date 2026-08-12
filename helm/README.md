@@ -1,4 +1,4 @@
-# OpenGovMail — Helm deployment guide
+# Pingmailer — Helm deployment guide
 
 `helm/` is a single umbrella chart that installs the whole outbound-mail stack
 as one release. Each service is still a self-contained subchart under
@@ -49,16 +49,16 @@ Released versions are published to GHCR as OCI artifacts, so you can install
 without cloning this repo:
 
 ```bash
-helm show values oci://ghcr.io/opengovmail/charts/opengovmail --version <version> > my-values.yaml
+helm show values oci://ghcr.io/opengovmail/charts/pingmailer --version <version> > my-values.yaml
 # edit my-values.yaml, then:
-helm install opengovmail oci://ghcr.io/opengovmail/charts/opengovmail \
+helm install pingmailer oci://ghcr.io/opengovmail/charts/pingmailer \
   --version <version> -n <namespace> -f my-values.yaml
 ```
 
 `helm search` does not work against OCI registries. List available versions with:
 
 ```bash
-helm show chart oci://ghcr.io/opengovmail/charts/opengovmail --version <version>
+helm show chart oci://ghcr.io/opengovmail/charts/pingmailer --version <version>
 ```
 
 If the package is private, authenticate first with a token that has
@@ -124,13 +124,13 @@ uncommitted values file, or supply it separately with a second `-f`.
 
 ```bash
 helm lint ./helm -f my-values.yaml
-helm template opengovmail ./helm -n <namespace> -f my-values.yaml | less
+helm template pingmailer ./helm -n <namespace> -f my-values.yaml | less
 ```
 
 ### 3. Install
 
 ```bash
-helm upgrade --install opengovmail ./helm \
+helm upgrade --install pingmailer ./helm \
   --namespace <namespace> --create-namespace \
   -f my-values.yaml
 ```
@@ -141,7 +141,7 @@ of this command and the four constraints that namespace enforces.
 ### 4. Verify
 
 ```bash
-kubectl -n <namespace> get pods,svc,pvc -l app.kubernetes.io/instance=opengovmail
+kubectl -n <namespace> get pods,svc,pvc -l app.kubernetes.io/instance=pingmailer
 kubectl -n <namespace> rollout status deploy/smtp-server
 kubectl -n <namespace> logs deploy/smtp-server -f
 ```
@@ -185,7 +185,7 @@ oc whoami --show-context     # confirm before touching a prod namespace
 ### Install
 
 ```bash
-helm upgrade --install opengovmail ./helm \
+helm upgrade --install pingmailer ./helm \
   --namespace <namespace> \
   -f my-values.yaml
 ```
@@ -237,7 +237,7 @@ Confirm before installing — the rendered pod `securityContext` should carry no
 UID:
 
 ```bash
-helm template opengovmail ./helm -f my-values.yaml \
+helm template pingmailer ./helm -f my-values.yaml \
   | awk '/name: raven-sasl$/,0' | grep -A6 'securityContext:'
 ```
 
@@ -304,7 +304,7 @@ oc -n <namespace> get svc smtp-server -o jsonpath='{.spec.clusterIP}'
 ### Verify on OpenShift
 
 ```bash
-oc -n <namespace> get pods,svc,route,pvc -l app.kubernetes.io/instance=opengovmail
+oc -n <namespace> get pods,svc,route,pvc -l app.kubernetes.io/instance=pingmailer
 HOST=$(oc -n <namespace> get route api-server -o jsonpath='{.spec.host}')
 curl -sk -o /dev/null -w 'HTTP %{http_code}\n' https://$HOST/healthcheck
 ```
@@ -388,7 +388,7 @@ import smtplib, ssl, base64, os
 from email.message import EmailMessage
 tok, user, to = os.environ["TOK"], "contact@example.com", "you@elsewhere.test"
 m = EmailMessage(); m["From"], m["To"] = user, to
-m["Subject"] = "OpenGovMail smoke test"
+m["Subject"] = "Pingmailer smoke test"
 m.set_content("test")
 s = smtplib.SMTP("mail.example.com", 587, timeout=40)
 s.ehlo(); s.starttls(context=ssl.create_default_context()); s.ehlo()
@@ -448,11 +448,11 @@ Every subchart has an `enabled` flag, so you can roll out incrementally:
 
 ```bash
 # infrastructure first
-helm upgrade --install opengovmail ./helm -n <namespace> -f my-values.yaml \
+helm upgrade --install pingmailer ./helm -n <namespace> -f my-values.yaml \
   --set smtp-server.enabled=false --set api-server.enabled=false
 
 # then the rest
-helm upgrade --install opengovmail ./helm -n <namespace> -f my-values.yaml
+helm upgrade --install pingmailer ./helm -n <namespace> -f my-values.yaml
 ```
 
 A subchart can also be installed entirely on its own — it keeps its own
@@ -491,9 +491,9 @@ Ingress or Route, which terminates TLS for it.
 ## Upgrading and rolling back
 
 ```bash
-helm upgrade opengovmail ./helm -n <namespace> -f my-values.yaml
-helm history opengovmail -n <namespace>
-helm rollback opengovmail <revision> -n <namespace>
+helm upgrade pingmailer ./helm -n <namespace> -f my-values.yaml
+helm history pingmailer -n <namespace>
+helm rollback pingmailer <revision> -n <namespace>
 ```
 
 Scaling constraints: `opendkim-server` and `smtp-server` must stay at
@@ -503,7 +503,7 @@ Postfix queue). Only `api-server` is stateless and safe to scale.
 ## Uninstalling
 
 ```bash
-helm uninstall opengovmail -n <namespace>
+helm uninstall pingmailer -n <namespace>
 ```
 
 PVCs are **not** removed by `helm uninstall`. That is deliberate — deleting

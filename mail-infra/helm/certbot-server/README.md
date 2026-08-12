@@ -1,7 +1,7 @@
-# opengovmail-certificates Helm chart
+# pingmailer-certificates Helm chart
 
 Renders [cert-manager](https://cert-manager.io) `Certificate` CRDs for the
-OpenGovMail stack. Each configured domain gets a certificate
+PingMailer stack. Each configured domain gets a certificate
 covering `domain` and `*.domain`, issued by a Let's Encrypt ClusterIssuer via
 the Cloudflare DNS-01 solver.
 
@@ -10,13 +10,13 @@ run a workload — it only declares `Certificate` resources. cert-manager
 reconciles them and writes the resulting TLS material into Kubernetes Secrets
 that your other workloads (smtp-server, api-server, etc.) mount.
 
-Modeled after [OpenGovMail/opengovmail#325](https://github.com/OpenGovMail/opengovmail/pull/325).
+Modeled after [OpenGovMail/pingmailer#325](https://github.com/OpenGovMail/pingmailer/pull/325).
 
 ## Architecture
 
 ```
  ┌─────────────────────────┐    creates    ┌──────────────────────────┐
- │ opengovmail-certificates     │ ───────────▶  │ Certificate (per domain) │
+ │ pingmailer-certificates     │ ───────────▶  │ Certificate (per domain) │
  │ Helm chart              │               └────────────┬─────────────┘
  └─────────────────────────┘                            │ reconciled by
                                                         ▼
@@ -74,8 +74,8 @@ kubectl get clusterissuer   # le-staging + le-prod with READY=True
 Sensitive values stay out of `values.yaml`. Pass them on the command line:
 
 ```bash
-helm upgrade --install opengovmail-certificates ./mail-infra/helm/certbot-server \
-  --namespace opengovmail --create-namespace \
+helm upgrade --install pingmailer-certificates ./mail-infra/helm/certbot-server \
+  --namespace pingmailer --create-namespace \
   --set tls.issuer=le-staging \
   --set 'tls.domains={mail.example.com,example.com}'
 ```
@@ -83,16 +83,16 @@ helm upgrade --install opengovmail-certificates ./mail-infra/helm/certbot-server
 When the staging certificate reports `READY=True`, flip to prod:
 
 ```bash
-helm upgrade --install opengovmail-certificates ./mail-infra/helm/certbot-server \
-  --namespace opengovmail --reuse-values \
+helm upgrade --install pingmailer-certificates ./mail-infra/helm/certbot-server \
+  --namespace pingmailer --reuse-values \
   --set tls.issuer=le-prod
 ```
 
 Track issuance:
 
 ```bash
-kubectl -n opengovmail get certificate
-kubectl -n opengovmail describe certificate mail-example-com-tls
+kubectl -n pingmailer get certificate
+kubectl -n pingmailer describe certificate mail-example-com-tls
 ```
 
 ## Values
@@ -127,7 +127,7 @@ volumes:
 ## Uninstall
 
 ```bash
-helm uninstall opengovmail-certificates -n opengovmail
+helm uninstall pingmailer-certificates -n pingmailer
 ```
 
 This removes the `Certificate` objects. cert-manager will then garbage-collect

@@ -1,11 +1,11 @@
 # ---------------------------------------------------------------------------
-# opengovmail-certificates values
+# pingmailer-certificates values
 #
 # Sensitive values (domain list, ACME email, Cloudflare API token) are NOT
 # baked into this file. Pass them at install/upgrade time:
 #
-#   helm upgrade --install opengovmail-certificates ./mail-infra/helm/certbot-server \
-#     --namespace opengovmail --create-namespace \
+#   helm upgrade --install pingmailer-certificates ./mail-infra/helm/certbot-server \
+#     --namespace pingmailer --create-namespace \
 #     --set tls.issuer=le-staging \
 #     --set 'tls.domains={mail.example.com,example.com}'
 #

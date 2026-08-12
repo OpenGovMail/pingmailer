@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================
-#  OpenGovMail Setup Wizard
+#  PingMailer Setup Wizard
 # ============================================
 
 # Colors
@@ -17,7 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/../../../" && pwd)"
 # Conf directory contains config files
 CONF_DIR="$(cd "${SCRIPT_DIR}/../../conf" && pwd)"
-CONFIG_FILE="${CONF_DIR}/opengovmail.yaml"
+CONFIG_FILE="${CONF_DIR}/pingmailer.yaml"
 
 # ASCII Banner
 echo -e "${CYAN}"
@@ -45,7 +45,7 @@ EOF
 echo -e "${NC}"
 
 echo ""
-echo -e " 🚀 ${GREEN}Welcome to OpenGovMail Setup${NC}"
+echo -e " 🚀 ${GREEN}Welcome to PingMailer Setup${NC}"
 echo "---------------------------------------------"
 
 MAIL_DOMAIN=""
@@ -55,7 +55,7 @@ MAIL_DOMAIN=""
 # ================================
 echo -e "\n${YELLOW}Step 1/4: Configure domain name${NC}"
 
-# Extract primary (first) domain from the domains list in opengovmail.yaml
+# Extract primary (first) domain from the domains list in pingmailer.yaml
 MAIL_DOMAIN=$(grep -m 1 '^\s*-\s*domain:' "$CONFIG_FILE" | sed 's/.*domain:\s*//' | xargs)
 
 # Validate if MAIL_DOMAIN is empty
@@ -92,14 +92,14 @@ fi
 # ================================
 echo -e "\n${YELLOW}Step 3/4: Starting Docker services${NC}"
 
-# Start main OpenGovMail services
-echo "  - Starting OpenGovMail services and API Endpoint..."
+# Start main PingMailer services
+echo "  - Starting PingMailer services and API Endpoint..."
 (cd "${ROOT_DIR}" && docker compose up -d)
 if [ $? -ne 0 ]; then
 	echo -e "${RED}✗ Docker compose failed. Please check the logs.${NC}"
 	exit 1
 fi
-echo -e "${GREEN}  ✓ OpenGovMail services started${NC}"
+echo -e "${GREEN}  ✓ PingMailer services started${NC}"
 
 sleep 3 # Wait for services to initialize
 

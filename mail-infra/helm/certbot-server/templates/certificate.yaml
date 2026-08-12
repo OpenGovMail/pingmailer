@@ -10,7 +10,7 @@ metadata:
   name: {{ . | replace "." "-" }}-tls
   namespace: {{ $.Release.Namespace }}
   labels:
-    {{- include "opengovmail-certificates.labels" $ | nindent 4 }}
+    {{- include "pingmailer-certificates.labels" $ | nindent 4 }}
 spec:
   secretName: {{ . | replace "." "-" }}-tls
   issuerRef:

@@ -1,8 +1,8 @@
-opengovmail-raven-sasl has been installed.
+pingmailer-raven-sasl has been installed.
 
 Release:   {{ .Release.Name }}
 Namespace: {{ .Release.Namespace }}
-Service:   {{ include "opengovmail-raven-sasl.fullname" . }}:{{ .Values.service.port }} (Dovecot SASL)
+Service:   {{ include "pingmailer-raven-sasl.fullname" . }}:{{ .Values.service.port }} (Dovecot SASL)
 Domain:    {{ .Values.config.domain }}
 
 OAuth audiences accepted:
@@ -15,7 +15,7 @@ OAuth audiences accepted:
 In your smtp-server (Postfix) chart, set:
 
   smtpd_sasl_type            = dovecot
-  smtpd_sasl_path            = inet:{{ include "opengovmail-raven-sasl.fullname" . }}:{{ .Values.service.port }}
+  smtpd_sasl_path            = inet:{{ include "pingmailer-raven-sasl.fullname" . }}:{{ .Values.service.port }}
   smtpd_sasl_auth_enable     = yes
   smtpd_sasl_security_options = noanonymous
 
@@ -24,11 +24,11 @@ master.cf string working when both charts share a namespace.)
 
 ----- Check the pod -----
 
-  kubectl -n {{ .Release.Namespace }} logs -f deploy/{{ include "opengovmail-raven-sasl.fullname" . }}
+  kubectl -n {{ .Release.Namespace }} logs -f deploy/{{ include "pingmailer-raven-sasl.fullname" . }}
 
   # TCP smoke test
   kubectl -n {{ .Release.Namespace }} run -it --rm tmp-busybox --image=busybox --restart=Never -- \
-    sh -c 'nc -zv {{ include "opengovmail-raven-sasl.fullname" . }} {{ .Values.service.port }}'
+    sh -c 'nc -zv {{ include "pingmailer-raven-sasl.fullname" . }} {{ .Values.service.port }}'
 
 ----- Upgrade with new sensitive values -----
 
@@ -43,5 +43,5 @@ fullchain.pem + privkey.pem.
 No TLS Secret was provided (tlsSecret.name is empty). If raven needs TLS
 certs (e.g. to call thunder over HTTPS with a private CA), point
 `tlsSecret.name` at a cert-manager-managed Secret like
-`<dash-domain>-tls` from the opengovmail-certificates chart.
+`<dash-domain>-tls` from the pingmailer-certificates chart.
 {{- end }}

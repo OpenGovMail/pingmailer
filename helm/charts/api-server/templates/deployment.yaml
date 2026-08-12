@@ -1,27 +1,27 @@
 {{- if not .Values.image.repository }}
-{{- fail "image.repository is required — set it to the registry path you pushed the api-server image to (e.g. ghcr.io/opengovmail/opengovmail-api-server)." }}
+{{- fail "image.repository is required — set it to the registry path you pushed the api-server image to (e.g. ghcr.io/opengovmail/pingmailer-api-server)." }}
 {{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "opengovmail-api-server.fullname" . }}
+  name: {{ include "pingmailer-api-server.fullname" . }}
   labels:
-    {{- include "opengovmail-api-server.labels" . | nindent 4 }}
+    {{- include "pingmailer-api-server.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "opengovmail-api-server.selectorLabels" . | nindent 6 }}
+      {{- include "pingmailer-api-server.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "opengovmail-api-server.selectorLabels" . | nindent 8 }}
+        {{- include "pingmailer-api-server.selectorLabels" . | nindent 8 }}
       {{- with .Values.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ include "opengovmail-api-server.serviceAccountName" . }}
+      serviceAccountName: {{ include "pingmailer-api-server.serviceAccountName" . }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}

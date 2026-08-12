@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "opengovmail-api-server.fullname" . }}
+  name: {{ include "pingmailer-api-server.fullname" . }}
   labels:
-    {{- include "opengovmail-api-server.labels" . | nindent 4 }}
+    {{- include "pingmailer-api-server.labels" . | nindent 4 }}
   {{- with .Values.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -16,4 +16,4 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "opengovmail-api-server.selectorLabels" . | nindent 4 }}
+    {{- include "pingmailer-api-server.selectorLabels" . | nindent 4 }}

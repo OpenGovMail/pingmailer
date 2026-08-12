@@ -1,14 +1,14 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "opengovmail-certificates.name" -}}
+{{- define "pingmailer-certificates.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Create a default fully qualified app name.
 */}}
-{{- define "opengovmail-certificates.fullname" -}}
+{{- define "pingmailer-certificates.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -24,16 +24,16 @@ Create a default fully qualified app name.
 {{/*
 Chart label.
 */}}
-{{- define "opengovmail-certificates.chart" -}}
+{{- define "pingmailer-certificates.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels.
 */}}
-{{- define "opengovmail-certificates.labels" -}}
-helm.sh/chart: {{ include "opengovmail-certificates.chart" . }}
-{{ include "opengovmail-certificates.selectorLabels" . }}
+{{- define "pingmailer-certificates.labels" -}}
+helm.sh/chart: {{ include "pingmailer-certificates.chart" . }}
+{{ include "pingmailer-certificates.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -43,7 +43,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels.
 */}}
-{{- define "opengovmail-certificates.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "opengovmail-certificates.name" . }}
+{{- define "pingmailer-certificates.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "pingmailer-certificates.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
