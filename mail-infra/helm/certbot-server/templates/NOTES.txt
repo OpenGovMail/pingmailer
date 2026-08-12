@@ -1,4 +1,4 @@
-silver-certificates has been installed.
+opengovmail-certificates has been installed.
 
 Release:   {{ .Release.Name }}
 Namespace: {{ .Release.Namespace }}

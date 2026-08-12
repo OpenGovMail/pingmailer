@@ -1,7 +1,7 @@
 apiVersion: v2
 name: api-server
 description: |
-  Portable Helm chart for the Pingmailer api-server (Go service that accepts
+  Portable Helm chart for the OpenGovMail api-server (Go service that accepts
   `POST /notify` and relays the request to SMTP using the caller's Bearer token
   as the XOAUTH2 credential). Serves plain HTTP on :8000; external TLS is
   terminated at the ingress/route layer (Kubernetes Ingress by default, OpenShift
@@ -14,12 +14,12 @@ keywords:
   - api
   - smtp
   - mail
-  - pingmailer
+  - opengovmail
   - kubernetes
   - openshift
   - portable
 maintainers:
-  - name: LSFLK
-    url: https://github.com/lsflk
+  - name: OpenGovMail
+    url: https://github.com/OpenGovMail
 sources:
-  - https://github.com/LSFLK/silver
+  - https://github.com/OpenGovMail/opengovmail

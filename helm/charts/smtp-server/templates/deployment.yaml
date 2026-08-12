@@ -1,27 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "silver-smtp.fullname" . }}
+  name: {{ include "opengovmail-smtp.fullname" . }}
   labels:
-    {{- include "silver-smtp.labels" . | nindent 4 }}
+    {{- include "opengovmail-smtp.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   strategy:
     type: Recreate          # Postfix queue PVC is RWO — avoid rolling.
   selector:
     matchLabels:
-      {{- include "silver-smtp.selectorLabels" . | nindent 6 }}
+      {{- include "opengovmail-smtp.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "silver-smtp.selectorLabels" . | nindent 8 }}
+        {{- include "opengovmail-smtp.selectorLabels" . | nindent 8 }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      serviceAccountName: {{ include "silver-smtp.serviceAccountName" . }}
+      serviceAccountName: {{ include "opengovmail-smtp.serviceAccountName" . }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -55,7 +55,7 @@ spec:
               cp -rL /etc/postfix/. /shared-postfix/
               cp /configs/main.cf            /shared-postfix/main.cf
               cp /configs/master.cf          /shared-postfix/master.cf
-              cp /configs/silver.yaml        /shared-postfix/silver.yaml
+              cp /configs/opengovmail.yaml        /shared-postfix/opengovmail.yaml
               cp /configs/recipient_access   /shared-postfix/recipient_access
               postmap /shared-postfix/recipient_access
               echo "✓ /etc/postfix prepared, recipient_access compiled."
@@ -109,13 +109,13 @@ spec:
       volumes:
         - name: configs
           configMap:
-            name: {{ include "silver-smtp.fullname" . }}-conf
+            name: {{ include "opengovmail-smtp.fullname" . }}-conf
         - name: postfix-etc
           emptyDir: {}
         - name: spool
           {{- if .Values.persistence.spool.enabled }}
           persistentVolumeClaim:
-            claimName: {{ include "silver-smtp.spoolClaim" . }}
+            claimName: {{ include "opengovmail-smtp.spoolClaim" . }}
           {{- else }}
           emptyDir: {}
           {{- end }}

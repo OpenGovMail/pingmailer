@@ -1,7 +1,7 @@
 apiVersion: v2
-name: pingmailer
+name: opengovmail
 description: |
-  Umbrella Helm chart for the Pingmailer / Silver Mail stack. Installs the
+  Umbrella Helm chart for the OpenGovMail stack. Installs the
   four services that make up a working outbound mail platform as a single
   release:
 
@@ -22,8 +22,7 @@ type: application
 version: 0.1.0
 appVersion: "0.1.0"
 keywords:
-  - pingmailer
-  - silver
+  - opengovmail
   - mail
   - smtp
   - postfix
@@ -32,10 +31,10 @@ keywords:
   - kubernetes
   - openshift
 maintainers:
-  - name: LSFLK
-    url: https://github.com/lsflk
+  - name: OpenGovMail
+    url: https://github.com/OpenGovMail
 sources:
-  - https://github.com/LSFLK/silver
+  - https://github.com/OpenGovMail/opengovmail
 dependencies:
   - name: api-server
     version: 0.1.0

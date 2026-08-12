@@ -17,7 +17,7 @@ set -euo pipefail
 #   - A Cloudflare API token scoped to Zone:Read + DNS:Edit on your zone
 #   - kubectl + helm on PATH
 #
-# Adapted from https://github.com/LSFLK/silver/pull/325
+# Adapted from https://github.com/OpenGovMail/opengovmail/pull/325
 # ------------------------------------------------------------------------------
 
 RED='\033[0;31m'

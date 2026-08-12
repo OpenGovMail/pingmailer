@@ -1,4 +1,4 @@
-module github.com/Silver-Mail-Platform/pingmailer
+module github.com/OpenGovMail/opengovmail
 
 go 1.23
 

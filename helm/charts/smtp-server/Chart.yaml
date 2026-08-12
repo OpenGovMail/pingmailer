@@ -1,8 +1,8 @@
 apiVersion: v2
 name: smtp-server
 description: |
-  Helm chart for the Postfix-based SMTP server (ghcr.io/lsflk/silver-smtp)
-  used by the Pingmailer / Silver Mail stack. Renders main.cf / master.cf /
+  Helm chart for the Postfix-based SMTP server (ghcr.io/opengovmail/opengovmail-smtp)
+  used by the OpenGovMail stack. Renders main.cf / master.cf /
   recipient_access from values, wires Postfix to opendkim-server,
   raven-sasl, and (optionally) rspamd-server, mounts TLS certs from a
   cert-manager Secret, and persists the mail queue on a PVC.
@@ -13,9 +13,9 @@ keywords:
   - postfix
   - smtp
   - email
-  - pingmailer
+  - opengovmail
 maintainers:
-  - name: LSFLK
-    url: https://github.com/lsflk
+  - name: OpenGovMail
+    url: https://github.com/OpenGovMail
 sources:
-  - https://github.com/LSFLK/silver
+  - https://github.com/OpenGovMail/opengovmail

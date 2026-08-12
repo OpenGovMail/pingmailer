@@ -1,6 +1,6 @@
-# PingMailer API Server
+# OpenGovMail API Server
 
-A simple REST API service for sending emails via SMTP. Part of the Silver Mail Platform.
+A simple REST API service for sending emails via SMTP. Part of the OpenGovMail platform.
 
 ## Quick Start
 
@@ -14,7 +14,7 @@ cp .env.example .env
 docker compose up -d
 
 # View logs
-docker logs pingmailer-api -f
+docker logs opengovmail-api -f
 ```
 
 The API will be available at `http://your-host:8000/notify`

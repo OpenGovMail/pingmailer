@@ -2,27 +2,27 @@
 {{- fail "domain is required — pass via -f my-values.yaml or --set domain=example.com" }}
 {{- end }}
 {{- if and .Values.postfix.submission.enabled (not .Values.tlsSecret.name) }}
-{{- fail "tlsSecret.name is required when postfix.submission.enabled=true (submission/587 enforces STARTTLS). Point this at a cert-manager Secret produced by the silver-certificates chart." }}
+{{- fail "tlsSecret.name is required when postfix.submission.enabled=true (submission/587 enforces STARTTLS). Point this at a cert-manager Secret produced by the opengovmail-certificates chart." }}
 {{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "silver-smtp.fullname" . }}-conf
+  name: {{ include "opengovmail-smtp.fullname" . }}-conf
   labels:
-    {{- include "silver-smtp.labels" . | nindent 4 }}
+    {{- include "opengovmail-smtp.labels" . | nindent 4 }}
 data:
-  silver.yaml: |
+  opengovmail.yaml: |
     domains:
       - domain: {{ .Values.domain }}
 
   main.cf: |
     # ===========================================================
-    # main.cf — rendered by the silver-smtp Helm chart
+    # main.cf — rendered by the opengovmail-smtp Helm chart
     # ===========================================================
 
     # --- Identity ---
-    myhostname = {{ include "silver-smtp.hostname" . }}
+    myhostname = {{ include "opengovmail-smtp.hostname" . }}
     mydomain = {{ .Values.domain }}
     myorigin = $mydomain
     mydestination = localhost.localdomain, localhost
@@ -84,7 +84,7 @@ data:
 
   master.cf: |
     # ===========================================================
-    # master.cf — rendered by the silver-smtp Helm chart
+    # master.cf — rendered by the opengovmail-smtp Helm chart
     #
     # chroot column is "n" for every service (chroot is redundant in a container
     # and needs CAP_SYS_CHROOT). The smtp/submission listeners use HIGH ports

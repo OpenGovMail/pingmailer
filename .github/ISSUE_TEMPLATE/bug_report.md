@@ -22,7 +22,7 @@ What actually happened.
 ## Environment
 - OS: [e.g. Ubuntu 22.04]
 - Docker version: [e.g. 20.10.17]
-- PingMailer version: [e.g. v1.2.0 or commit hash]
+- OpenGovMail version: [e.g. v1.2.0 or commit hash]
 
 ## Additional Context
 Add any other context or screenshots about the issue.

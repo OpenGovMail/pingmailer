@@ -1,5 +1,5 @@
 # =============================================================================
-# silver-smtp (rootless / patched Postfix) for OpenShift restricted-v2.
+# opengovmail-smtp (rootless / patched Postfix) for OpenShift restricted-v2.
 #
 # WHY: OpenShift policy here forbids running as root, but stock Postfix's
 # `postfix`, `master`, and `postsuper` binaries hard-abort unless getuid()==0
@@ -64,7 +64,7 @@ RUN set -eux; \
     dpkg-buildpackage -us -uc -b
 
 # ----------------------------------------------------------------------------
-# Stage 2 — slim runtime, mirrors the stock silver-smtp image
+# Stage 2 — slim runtime, mirrors the stock opengovmail-smtp image
 # ----------------------------------------------------------------------------
 FROM debian:bookworm-slim
 ENV DEBIAN_FRONTEND=noninteractive

@@ -1,6 +1,6 @@
-# silver-raven-sasl Helm chart
+# opengovmail-raven-sasl Helm chart
 
-Helm chart for the `raven-sasl` service (`ghcr.io/lsflk/raven-sasl`) — the
+Helm chart for the `raven-sasl` service (`ghcr.io/opengovmail/raven-sasl`) — the
 Kubernetes counterpart of the `raven-sasl-server` block in this repo's
 [docker-compose.yml](../../../docker-compose.yml).
 
@@ -25,7 +25,7 @@ It validates two flavours of credentials:
 - A `ClusterIP Service` on port 12345 named `raven-sasl` (configurable)
   so the existing Postfix `master.cf` (`inet:raven-sasl:12345`) works unmodified.
 - Optionally mounts a cert-manager-managed `Secret` at `/certs`
-  (compatible with the [silver-certificates chart](../certbot-server/) —
+  (compatible with the [opengovmail-certificates chart](../certbot-server/) —
   `<dash-domain>-tls` Secrets with `tls.crt`/`tls.key` keys get
   remapped to `fullchain.pem`/`privkey.pem` automatically).
 
@@ -55,14 +55,14 @@ oauthEmailAuthorization:
     - alerts@example.com
     - noreply@example.com
 
-# Optional — TLS Secret produced by the silver-certificates chart
+# Optional — TLS Secret produced by the opengovmail-certificates chart
 tlsSecret:
   name: mail-example-com-tls
 ```
 
 ```bash
 helm upgrade --install raven-sasl ./helm/charts/raven-sasl-server \
-  --namespace pingmailer --create-namespace \
+  --namespace opengovmail --create-namespace \
   -f my-raven-values.yaml
 ```
 
@@ -118,7 +118,7 @@ when Thunder is in a different namespace or behind an ingress.
 ## Uninstall
 
 ```bash
-helm uninstall raven-sasl -n pingmailer
+helm uninstall raven-sasl -n opengovmail
 ```
 
 Nothing persistent is created by this chart — uninstall is clean.

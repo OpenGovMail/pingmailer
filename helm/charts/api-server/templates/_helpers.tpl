@@ -1,8 +1,8 @@
-{{- define "silver-api-server.name" -}}
+{{- define "opengovmail-api-server.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{- define "silver-api-server.fullname" -}}
+{{- define "opengovmail-api-server.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -15,13 +15,13 @@
 {{- end }}
 {{- end }}
 
-{{- define "silver-api-server.chart" -}}
+{{- define "opengovmail-api-server.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{- define "silver-api-server.labels" -}}
-helm.sh/chart: {{ include "silver-api-server.chart" . }}
-{{ include "silver-api-server.selectorLabels" . }}
+{{- define "opengovmail-api-server.labels" -}}
+helm.sh/chart: {{ include "opengovmail-api-server.chart" . }}
+{{ include "opengovmail-api-server.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -29,14 +29,14 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/component: api
 {{- end }}
 
-{{- define "silver-api-server.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "silver-api-server.name" . }}
+{{- define "opengovmail-api-server.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "opengovmail-api-server.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{- define "silver-api-server.serviceAccountName" -}}
+{{- define "opengovmail-api-server.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "silver-api-server.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "opengovmail-api-server.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
