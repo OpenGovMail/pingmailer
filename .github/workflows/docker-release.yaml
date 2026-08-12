@@ -4,8 +4,8 @@ name: Publish container images
 # with both `latest` and the release version.
 #
 # Release flow:
-#   git tag v0.2.0 && git push origin v0.2.0
-#   ...then publish a GitHub Release for that tag (or use workflow_dispatch).
+# git tag v0.2.0 && git push origin v0.2.0
+# ...then publish a GitHub Release for that tag (or use workflow_dispatch).
 #
 # raven-sasl is deliberately absent: it is built in a different repository
 # (ghcr.io/opengovmail/raven-sasl) and is only consumed here.
@@ -13,12 +13,14 @@ name: Publish container images
 on:
   release:
     types: [published]
+
   workflow_dispatch:
     inputs:
       version:
         description: "Version tag to publish (e.g. 0.2.0)"
         required: true
         type: string
+
   # Build-only check on PRs that touch image sources. Never pushes.
   pull_request:
     paths:
@@ -32,6 +34,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
       packages: write
@@ -43,23 +46,22 @@ jobs:
           - name: pingmailer-api-server
             context: ./api-server
             dockerfile: ./api-server/Dockerfile
-            # Static Go binary — cross-compiles cheaply, so build wide.
-            platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/ppc64le,linux/s390x
+            platforms: linux/amd64,linux/arm64
+
           - name: pingmailer-dkim
             context: ./mail-infra/images/pingmailer-dkim
             dockerfile: ./mail-infra/images/pingmailer-dkim/Dockerfile
             platforms: linux/amd64,linux/arm64
+
           - name: pingmailer-smtp
             context: ./mail-infra/images/pingmailer-smtp-rootless
             dockerfile: ./mail-infra/images/pingmailer-smtp-rootless/Dockerfile
-            # This image rebuilds Postfix from source; every extra platform is
-            # a full compile under QEMU emulation. Keep the list tight.
             platforms: linux/amd64,linux/arm64
-            # The smtp-server chart defaults to `tag: rootless`, so keep that
-            # tag moving or a chart install would pin an ageing image.
+            # The smtp-server chart defaults to `tag: rootless`.
             extra_tags: rootless
 
     name: ${{ matrix.name }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -67,28 +69,33 @@ jobs:
         id: v
         run: |
           case "${{ github.event_name }}" in
-            release)           version="${GITHUB_REF_NAME#v}" ;;
-            workflow_dispatch) version="${{ inputs.version }}" ;;
-            *)                 version="pr-${{ github.event.number }}" ;;
+            release)
+              version="${GITHUB_REF_NAME#v}"
+              ;;
+            workflow_dispatch)
+              version="${{ inputs.version }}"
+              ;;
+            *)
+              version="pr-${{ github.event.number }}"
+              ;;
           esac
+
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Publishing version: $version"
 
       - name: Build tag list
         id: tags
         run: |
-          # GHCR paths must be lowercase; the org name may not be.
           owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           image="${{ env.REGISTRY }}/$owner/${{ matrix.name }}"
           v="${{ steps.v.outputs.version }}"
 
-          # Always brace-delimit before a literal ':' — bare "$image:latest" is
-          # a lowercase modifier in some shells and silently mangles the tag.
           tags="${image}:${v}"
-          # `latest` only ever moves on a real release — never from a PR or a
-          # manual dispatch, so a dispatch can't silently redirect consumers.
+
+          # `latest` and extra tags only move on real releases.
           if [ "${{ github.event_name }}" = "release" ]; then
             tags="${tags},${image}:latest"
+
             for t in $(echo "${{ matrix.extra_tags }}" | tr ',' ' '); do
               [ -n "$t" ] && tags="${tags},${image}:${t}"
             done
@@ -98,9 +105,11 @@ jobs:
           echo "tags=$tags" >> "$GITHUB_OUTPUT"
           echo "Tags: $tags"
 
-      # QEMU lets one amd64 runner emit every listed architecture.
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
         if: github.event_name != 'pull_request'
@@ -122,29 +131,45 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ steps.v.outputs.version }}
-          provenance: false # keeps the index free of non-platform entries
+          provenance: false
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
 
-      # Guards a real regression: a tag was once published arm64-only, and the
-      # cluster failed the pull with "no image found in image index for
-      # architecture amd64". Fail here rather than at deploy time.
       - name: Verify every requested platform is in the manifest
         if: github.event_name != 'pull_request'
         run: |
-          ref="${{ steps.tags.outputs.image }}:${{ steps.v.outputs.version }}"  # literal, not shell-expanded
+          ref="${{ steps.tags.outputs.image }}:${{ steps.v.outputs.version }}"
           echo "Inspecting $ref"
+
           manifest=$(docker buildx imagetools inspect "$ref" --raw)
+
           missing=0
+
           for p in $(echo "${{ matrix.platforms }}" | tr ',' ' '); do
-            os=${p%%/*}; rest=${p#*/}; arch=${rest%%/*}
-            if echo "$manifest" | grep -q "\"architecture\":\"$arch\""; then
-              echo "  ok      $p"
+            os="${p%%/*}"
+            rest="${p#*/}"
+            arch="${rest%%/*}"
+
+            if echo "$manifest" | jq -e \
+              --arg os "$os" \
+              --arg arch "$arch" '
+                .manifests[] |
+                select(
+                  .platform.os == $os and
+                  .platform.architecture == $arch
+                )
+              ' >/dev/null; then
+              echo "  OK      $p"
             else
-              echo "  MISSING $p"; missing=1
+              echo "  MISSING $p"
+              missing=1
             fi
           done
-          [ "$missing" -eq 0 ] || { echo "::error::$ref is missing platforms."; exit 1; }
+
+          if [ "$missing" -ne 0 ]; then
+            echo "::error::$ref is missing platforms."
+            exit 1
+          fi
 
       - name: Summary
         if: github.event_name != 'pull_request'
