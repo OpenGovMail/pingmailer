@@ -2,9 +2,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "silver-api-server.fullname" . }}
+  name: {{ include "opengovmail-api-server.fullname" . }}
   labels:
-    {{- include "silver-api-server.labels" . | nindent 4 }}
+    {{- include "opengovmail-api-server.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -33,7 +33,7 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ include "silver-api-server.fullname" $ }}
+                name: {{ include "opengovmail-api-server.fullname" $ }}
                 port:
                   number: {{ $.Values.service.port }}
           {{- end }}

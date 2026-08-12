@@ -1,14 +1,14 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "silver-certificates.name" -}}
+{{- define "opengovmail-certificates.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Create a default fully qualified app name.
 */}}
-{{- define "silver-certificates.fullname" -}}
+{{- define "opengovmail-certificates.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -24,16 +24,16 @@ Create a default fully qualified app name.
 {{/*
 Chart label.
 */}}
-{{- define "silver-certificates.chart" -}}
+{{- define "opengovmail-certificates.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels.
 */}}
-{{- define "silver-certificates.labels" -}}
-helm.sh/chart: {{ include "silver-certificates.chart" . }}
-{{ include "silver-certificates.selectorLabels" . }}
+{{- define "opengovmail-certificates.labels" -}}
+helm.sh/chart: {{ include "opengovmail-certificates.chart" . }}
+{{ include "opengovmail-certificates.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -43,7 +43,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels.
 */}}
-{{- define "silver-certificates.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "silver-certificates.name" . }}
+{{- define "opengovmail-certificates.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "opengovmail-certificates.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}

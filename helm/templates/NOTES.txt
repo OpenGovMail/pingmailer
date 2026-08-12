@@ -1,4 +1,4 @@
-pingmailer {{ .Chart.Version }} installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+opengovmail {{ .Chart.Version }} installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
 
 Components in this release:
 {{ if index .Values "api-server" "enabled" }}  [x]{{ else }}  [ ]{{ end }} api-server        http :8000   (POST /notify, GET /healthcheck)

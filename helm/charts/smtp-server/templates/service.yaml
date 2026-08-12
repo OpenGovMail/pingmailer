@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "silver-smtp.fullname" . }}
+  name: {{ include "opengovmail-smtp.fullname" . }}
   labels:
-    {{- include "silver-smtp.labels" . | nindent 4 }}
+    {{- include "opengovmail-smtp.labels" . | nindent 4 }}
   {{- with .Values.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -38,4 +38,4 @@ spec:
       {{- end }}
     {{- end }}
   selector:
-    {{- include "silver-smtp.selectorLabels" . | nindent 4 }}
+    {{- include "opengovmail-smtp.selectorLabels" . | nindent 4 }}

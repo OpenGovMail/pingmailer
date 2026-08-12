@@ -1,16 +1,16 @@
 services:
   smtp-server:
-    image: ghcr.io/lsflk/silver-smtp:main
+    image: ghcr.io/opengovmail/opengovmail-smtp:main
     container_name: smtp-server-container
     ports:
       - "25:25"
       - "587:587"
     volumes:
-      - ./mail-infra/services/silver-config/postfix/main.cf:/etc/postfix/main.cf:ro
-      - ./mail-infra/services/silver-config/postfix/master.cf:/etc/postfix/master.cf:ro
-      - ./mail-infra/services/silver-config/postfix/recipient_access:/etc/postfix/recipient_access:ro
-      - ./mail-infra/conf/silver.yaml:/etc/postfix/silver.yaml
-      - ./mail-infra/services/silver-config/certbot/keys/etc:/etc/letsencrypt:ro
+      - ./mail-infra/services/opengovmail-config/postfix/main.cf:/etc/postfix/main.cf:ro
+      - ./mail-infra/services/opengovmail-config/postfix/master.cf:/etc/postfix/master.cf:ro
+      - ./mail-infra/services/opengovmail-config/postfix/recipient_access:/etc/postfix/recipient_access:ro
+      - ./mail-infra/conf/opengovmail.yaml:/etc/postfix/opengovmail.yaml
+      - ./mail-infra/services/opengovmail-config/certbot/keys/etc:/etc/letsencrypt:ro
       - postfix-spool:/var/spool/postfix
       - postfix-logs:/var/log
     networks:
@@ -21,13 +21,13 @@ services:
       - raven-sasl-server
 
   raven-sasl-server:
-    image: ghcr.io/lsflk/raven-sasl:latest
+    image: ghcr.io/opengovmail/raven-sasl:latest
     container_name: raven-sasl
     ports:
       - "12345:12345"
     volumes:
-      - ./mail-infra/services/silver-config/raven/conf:/etc/raven:rw
-      - ./mail-infra/services/silver-config/raven/certs:/certs:ro
+      - ./mail-infra/services/opengovmail-config/raven/conf:/etc/raven:rw
+      - ./mail-infra/services/opengovmail-config/raven/certs:/certs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./mail-infra/conf/oauth_client_email_authorization.json:/app/config/oauth_client_email_authorization.json:ro
     environment:
@@ -37,14 +37,14 @@ services:
     restart: unless-stopped
 
   opendkim-server:
-    image: ghcr.io/lsflk/silver-dkim:main
+    image: ghcr.io/opengovmail/opengovmail-dkim:main
     container_name: opendkim-server
     volumes:
-      - ./mail-infra/conf/silver.yaml:/etc/opendkim/silver.yaml
-      - ./mail-infra/services/silver-config/opendkim/opendkim.conf:/etc/opendkim/opendkim.conf:ro
-      - ./mail-infra/services/silver-config/opendkim/KeyTable:/etc/opendkim/KeyTable:ro
-      - ./mail-infra/services/silver-config/opendkim/SigningTable:/etc/opendkim/SigningTable:ro
-      - ./mail-infra/services/silver-config/opendkim/TrustedHosts:/etc/opendkim/TrustedHosts:ro
+      - ./mail-infra/conf/opengovmail.yaml:/etc/opendkim/opengovmail.yaml
+      - ./mail-infra/services/opengovmail-config/opendkim/opendkim.conf:/etc/opendkim/opendkim.conf:ro
+      - ./mail-infra/services/opengovmail-config/opendkim/KeyTable:/etc/opendkim/KeyTable:ro
+      - ./mail-infra/services/opengovmail-config/opendkim/SigningTable:/etc/opendkim/SigningTable:ro
+      - ./mail-infra/services/opengovmail-config/opendkim/TrustedHosts:/etc/opendkim/TrustedHosts:ro
       - dkim-keys:/etc/dkimkeys
     networks:
       - mail-network
@@ -69,7 +69,7 @@ services:
     volumes:
       - thunder-db:/opt/thunder/repository/database
       - consent-db:/opt/thunder/consent/repository/database
-      - ./mail-infra/services/silver-config/thunder/deployment.yaml:/opt/thunder/repository/conf/deployment.yaml:ro
+      - ./mail-infra/services/opengovmail-config/thunder/deployment.yaml:/opt/thunder/repository/conf/deployment.yaml:ro
     depends_on:
       thunder-db-init:
         condition: service_completed_successfully
@@ -86,22 +86,22 @@ services:
     volumes:
       - thunder-db:/opt/thunder/repository/database
       - consent-db:/opt/thunder/consent/repository/database
-      - ./mail-infra/services/silver-config/thunder/certs/server.cert:/opt/thunder/repository/resources/security/server.cert:ro
-      - ./mail-infra/services/silver-config/thunder/certs/server.key:/opt/thunder/repository/resources/security/server.key:ro
-      - ./mail-infra/services/silver-config/thunder/deployment.yaml:/opt/thunder/repository/conf/deployment.yaml:ro
-      - ./mail-infra/services/silver-config/thunder/console-config.js:/opt/thunder/apps/console/config.js:ro
-      - ./mail-infra/services/silver-config/thunder/gate-config.js:/opt/thunder/apps/gate/config.js:ro
+      - ./mail-infra/services/opengovmail-config/thunder/certs/server.cert:/opt/thunder/repository/resources/security/server.cert:ro
+      - ./mail-infra/services/opengovmail-config/thunder/certs/server.key:/opt/thunder/repository/resources/security/server.key:ro
+      - ./mail-infra/services/opengovmail-config/thunder/deployment.yaml:/opt/thunder/repository/conf/deployment.yaml:ro
+      - ./mail-infra/services/opengovmail-config/thunder/console-config.js:/opt/thunder/apps/console/config.js:ro
+      - ./mail-infra/services/opengovmail-config/thunder/gate-config.js:/opt/thunder/apps/gate/config.js:ro
     networks:
       - mail-network
     restart: unless-stopped
 
   certbot-server:
-    image: ghcr.io/lsflk/silver-certbot:main
+    image: ghcr.io/opengovmail/opengovmail-certbot:main
     container_name: certbot-server
     volumes:
-      - ./mail-infra/services/silver-config/certbot/keys/etc:/etc/letsencrypt
-      - ./mail-infra/services/silver-config/certbot/keys/log:/var/log/letsencrypt
-      - ./mail-infra/services/silver-config/certbot/keys/lib:/var/lib/letsencrypt
+      - ./mail-infra/services/opengovmail-config/certbot/keys/etc:/etc/letsencrypt
+      - ./mail-infra/services/opengovmail-config/certbot/keys/log:/var/log/letsencrypt
+      - ./mail-infra/services/opengovmail-config/certbot/keys/lib:/var/lib/letsencrypt
     ports:
       - "80:80"
       - "443:443"
@@ -112,7 +112,7 @@ services:
     build:
       context: ./api-server
       dockerfile: Dockerfile
-    container_name: pingmailer-api-server
+    container_name: opengovmail-api-server
     restart: unless-stopped
     ports:
       - "8443:8443"

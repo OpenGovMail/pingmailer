@@ -2,9 +2,9 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "silver-smtp.spoolClaim" . }}
+  name: {{ include "opengovmail-smtp.spoolClaim" . }}
   labels:
-    {{- include "silver-smtp.labels" . | nindent 4 }}
+    {{- include "opengovmail-smtp.labels" . | nindent 4 }}
 spec:
   accessModes:
     {{- toYaml .Values.persistence.spool.accessModes | nindent 4 }}

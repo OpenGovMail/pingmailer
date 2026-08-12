@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================
-#  Silver Mail Setup Script - This script is responsible for generating all the configs for our services.
+#  OpenGovMail Setup Script - This script is responsible for generating all the configs for our services.
 # ============================================
 
 # Colors
@@ -17,9 +17,9 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SERVICES_DIR="$(cd "${SCRIPT_DIR}/../../services" && pwd)"
 # Conf directory contains config files
 readonly CONF_DIR="$(cd "${SCRIPT_DIR}/../../conf" && pwd)"
-readonly CONFIG_FILE="${CONF_DIR}/silver.yaml"
-# Read silver-config from the configuration file
-readonly SILVER_CONFIG=$(grep -m 1 '^config-url:' "${CONFIG_FILE}" | sed 's/config-url: //' | xargs)
+readonly CONFIG_FILE="${CONF_DIR}/opengovmail.yaml"
+# Read opengovmail-config from the configuration file
+readonly OPENGOVMAIL_CONFIG=$(grep -m 1 '^config-url:' "${CONFIG_FILE}" | sed 's/config-url: //' | xargs)
 
 # ASCII Banner
 echo -e "${CYAN}"
@@ -47,7 +47,7 @@ EOF
 echo -e "${NC}"
 
 echo
-echo -e " 🚀 ${GREEN}Welcome to the Silver Mail System Setup${NC}"
+echo -e " 🚀 ${GREEN}Welcome to the OpenGovMail Setup${NC}"
 echo "---------------------------------------------"
 
 MAIL_DOMAIN=""
@@ -57,7 +57,7 @@ MAIL_DOMAIN=""
 # ================================
 echo -e "\n${YELLOW}Step 1/2: Configure domain name${NC}"
 
-# Extract primary (first) domain from the domains list in silver.yaml
+# Extract primary (first) domain from the domains list in opengovmail.yaml
 readonly MAIL_DOMAIN=$(grep -m 1 '^\s*-\s*domain:' "${CONFIG_FILE}" | sed 's/.*domain:\s*//' | xargs)
 
 # Validate if MAIL_DOMAIN is empty

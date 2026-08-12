@@ -1,15 +1,15 @@
-# silver-opendkim Helm chart
+# opengovmail-opendkim Helm chart
 
-Helm chart for the OpenDKIM milter (`ghcr.io/lsflk/silver-dkim`) — the
+Helm chart for the OpenDKIM milter (`ghcr.io/opengovmail/opengovmail-dkim`) — the
 Kubernetes counterpart of the `opendkim-server` service in this repo's
 [docker-compose.yml](../../../docker-compose.yml).
 
 OpenDKIM signs (and verifies) outbound SMTP traffic from Postfix. This chart:
 
 1. Generates `opendkim.conf`, `KeyTable`, `SigningTable`, `TrustedHosts`, and
-   `silver.yaml` deterministically from your `domains` list and packs them
+   `opengovmail.yaml` deterministically from your `domains` list and packs them
    into a `ConfigMap`.
-2. Runs the `silver-dkim` image, which inspects `silver.yaml` on startup and
+2. Runs the `opengovmail-dkim` image, which inspects `opengovmail.yaml` on startup and
    calls `opendkim-genkey` for any domain whose private key is not yet on
    disk at `/etc/dkimkeys/<domain>/<selector>.private`.
 3. Persists those generated keys on a `PersistentVolumeClaim` so subsequent
@@ -27,7 +27,7 @@ The two mainstream patterns in Kubernetes are:
 | **Secret-mount** | Pre-generate the private keys, `kubectl create secret`, mount it at `/etc/dkimkeys` | etcd encryption-at-rest, RBAC-gated, easy to mirror across clusters | Manual bootstrap + manual rotation |
 | **PVC-mount (this chart)** | Container self-bootstraps via `opendkim-genkey` on a PVC | Zero-touch — install and forget | Encryption depends on your `StorageClass`; you own backup |
 
-The `silver-dkim` image is **designed for the PVC pattern** — its entrypoint
+The `opengovmail-dkim` image is **designed for the PVC pattern** — its entrypoint
 runs `opendkim-genkey` for any missing key and writes into `/etc/dkimkeys/`.
 If you want the Secret pattern instead, point `persistence.existingClaim` at
 a CSI Secret-backed PVC (or kustomize-patch the Deployment to mount a
@@ -50,7 +50,7 @@ domains:
 
 ```bash
 helm upgrade --install opendkim-server ./helm/charts/opendkim-server \
-  --namespace pingmailer --create-namespace \
+  --namespace opengovmail --create-namespace \
   -f my-domains.yaml
 ```
 
@@ -58,7 +58,7 @@ Or inline:
 
 ```bash
 helm upgrade --install opendkim-server ./helm/charts/opendkim-server \
-  --namespace pingmailer --create-namespace \
+  --namespace opengovmail --create-namespace \
   --set 'domains[0].domain=example.com'
 ```
 
@@ -70,7 +70,7 @@ The chart `fail`s loudly when `domains` is empty.
 The pod prints them on startup; you can also grab them on demand:
 
 ```bash
-kubectl -n pingmailer exec deploy/opendkim-server -- \
+kubectl -n opengovmail exec deploy/opendkim-server -- \
   sh -c 'for d in /etc/dkimkeys/*; do echo "--- $(basename "$d") ---"; cat "$d"/*.txt; done'
 ```
 
@@ -96,7 +96,7 @@ charts share a namespace.
 | Key                          | Default                  | Notes                                                                 |
 |------------------------------|--------------------------|-----------------------------------------------------------------------|
 | `domains`                    | `[]` (**required**)      | List of `{domain, selector?, keySize?}`. `selector` defaults to `mail`, `keySize` to `2048` |
-| `image.repository`           | `ghcr.io/lsflk/silver-dkim` |                                                                       |
+| `image.repository`           | `ghcr.io/opengovmail/opengovmail-dkim` |                                                                       |
 | `image.tag`                  | `main`                   |                                                                       |
 | `opendkim.mode`              | `sv`                     | `s` = sign only, `v` = verify only, `sv` = both                       |
 | `opendkim.trustedHosts`      | RFC1918 + loopback       | Chart appends each configured domain + `*.<domain>` automatically     |
@@ -117,7 +117,7 @@ charts share a namespace.
 ## Uninstall
 
 ```bash
-helm uninstall opendkim-server -n pingmailer
+helm uninstall opendkim-server -n opengovmail
 ```
 
 PVC stays behind — see NOTES.txt to delete it explicitly.

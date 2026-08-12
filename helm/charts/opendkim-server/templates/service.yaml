@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "silver-opendkim.fullname" . }}
+  name: {{ include "opengovmail-opendkim.fullname" . }}
   labels:
-    {{- include "silver-opendkim.labels" . | nindent 4 }}
+    {{- include "opengovmail-opendkim.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -12,4 +12,4 @@ spec:
       protocol: TCP
       name: milter
   selector:
-    {{- include "silver-opendkim.selectorLabels" . | nindent 4 }}
+    {{- include "opengovmail-opendkim.selectorLabels" . | nindent 4 }}

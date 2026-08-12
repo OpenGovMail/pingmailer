@@ -1,11 +1,11 @@
 # ---------------------------------------------------------------------------
-# silver-smtp values
+# opengovmail-smtp values
 #
 # Sensitive values (mail domain, TLS Secret name) are intentionally empty
 # here. Supply them at install/upgrade time:
 #
 #   helm upgrade --install smtp-server ./helm/charts/smtp-server \
-#     --namespace pingmailer --create-namespace \
+#     --namespace opengovmail --create-namespace \
 #     -f my-smtp-values.yaml
 # ---------------------------------------------------------------------------
 
@@ -18,12 +18,12 @@ fullnameOverride: "smtp-server"
 replicaCount: 1
 
 image:
-  # Patched-Postfix (rootless) image built from mail-infra/images/silver-smtp-rootless.
+  # Patched-Postfix (rootless) image built from mail-infra/images/opengovmail-smtp-rootless.
   # The postfix/master/postsuper getuid()==0 checks are removed and the
   # set_eugid/set_ugid/chroot_uid privilege-drops are no-op'd for non-root, so
   # Postfix runs single-UID as the arbitrary non-root UID OpenShift assigns
   # under restricted-v2 — no custom SCC / anyuid grant required.
-  repository: ghcr.io/silver-mail-platform/silver-smtp
+  repository: ghcr.io/opengovmail/opengovmail-smtp
   tag: rootless
   pullPolicy: Always
 
@@ -68,7 +68,7 @@ postfix:
   milterProtocol: 6
   milterDefaultAction: accept
 
-  # SASL — points at silver-raven-sasl.
+  # SASL — points at opengovmail-raven-sasl.
   sasl:
     type: dovecot
     path: "inet:raven-sasl:12345"
@@ -103,7 +103,7 @@ postfix:
   # - "myorigin = $mydomain"
 
 # ---------------------------------------------------------------------------
-# TLS certificate Secret (typically produced by the silver-certificates
+# TLS certificate Secret (typically produced by the opengovmail-certificates
 # chart with keys `tls.crt` + `tls.key`). The chart remaps them to
 # fullchain.pem + privkey.pem under /etc/letsencrypt/live/<domain>/ to
 # match the paths Postfix expects.

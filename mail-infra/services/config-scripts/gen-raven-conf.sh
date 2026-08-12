@@ -8,20 +8,20 @@ set -euo pipefail # Exit on error, undefined vars, or failed pipe
 
 # --- Paths ---
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ROOT_DIR="$(dirname "$SCRIPT_DIR")"       # /root/silver/services
-GEN_DIR="${ROOT_DIR}/silver-config/raven" # Base path
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"       # /root/opengovmail/services
+GEN_DIR="${ROOT_DIR}/opengovmail-config/raven" # Base path
 
-CONFIG_FILE="${ROOT_DIR}/../conf/silver.yaml"
+CONFIG_FILE="${ROOT_DIR}/../conf/opengovmail.yaml"
 OUTPUT_FILE="${GEN_DIR}/conf/raven.yaml"
 
-# --- Extract primary (first) domain from silver.yaml ---
+# --- Extract primary (first) domain from opengovmail.yaml ---
 # Look for the first domain entry under the domains list
 MAIL_DOMAIN=$(grep -m 1 '^\s*-\s*domain:' "$CONFIG_FILE" | sed 's/.*domain:\s*//' | xargs)
 MAIL_DOMAIN=${MAIL_DOMAIN:-example.local}
 
 # --- Certificate paths ---
-LETSENCRYPT_PATH="${ROOT_DIR}/silver-config/certbot/keys/etc/live/${MAIL_DOMAIN}"
-RAVEN_CERT_PATH="${ROOT_DIR}/silver-config/raven/certs"
+LETSENCRYPT_PATH="${ROOT_DIR}/opengovmail-config/certbot/keys/etc/live/${MAIL_DOMAIN}"
+RAVEN_CERT_PATH="${ROOT_DIR}/opengovmail-config/raven/certs"
 
 # --- Create necessary directories ---
 mkdir -p "$(dirname "$OUTPUT_FILE")"

@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Silver-Mail-Platform/pingmailer/internal/api"
+	"github.com/OpenGovMail/opengovmail/internal/api"
 )
 
 func main() {

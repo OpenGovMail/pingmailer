@@ -3,7 +3,7 @@
 # every example.com / client-id placeholder, and DO NOT COMMIT the result:
 #
 #   cp helm/values.example.yaml my-values.yaml
-#   helm upgrade --install pingmailer ./helm -n pingmailer -f my-values.yaml
+#   helm upgrade --install opengovmail ./helm -n opengovmail -f my-values.yaml
 #
 # This file assumes the mail domain is `example.com` and that a TLS Secret
 # named `example-com-tls` (keys tls.crt / tls.key) already exists in the
@@ -14,7 +14,7 @@ api-server:
   enabled: true
   replicaCount: 2
   image:
-    repository: ghcr.io/silver-mail-platform/pingmailer-api-server
+    repository: ghcr.io/opengovmail/opengovmail-api-server
     tag: "0.1.0"
   ingress:
     enabled: true

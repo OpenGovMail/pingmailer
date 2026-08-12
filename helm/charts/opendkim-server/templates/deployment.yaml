@@ -1,29 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "silver-opendkim.fullname" . }}
+  name: {{ include "opengovmail-opendkim.fullname" . }}
   labels:
-    {{- include "silver-opendkim.labels" . | nindent 4 }}
+    {{- include "opengovmail-opendkim.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   strategy:
     type: Recreate            # PVC is RWO and DKIM is singleton — avoid rolling.
   selector:
     matchLabels:
-      {{- include "silver-opendkim.selectorLabels" . | nindent 6 }}
+      {{- include "opengovmail-opendkim.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "silver-opendkim.selectorLabels" . | nindent 8 }}
+        {{- include "opengovmail-opendkim.selectorLabels" . | nindent 8 }}
       annotations:
         # Roll the pod when the ConfigMap (and therefore opendkim.conf /
-        # KeyTable / SigningTable / TrustedHosts / silver.yaml) changes.
+        # KeyTable / SigningTable / TrustedHosts / opengovmail.yaml) changes.
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      serviceAccountName: {{ include "silver-opendkim.serviceAccountName" . }}
+      serviceAccountName: {{ include "opengovmail-opendkim.serviceAccountName" . }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -62,8 +62,8 @@ spec:
               subPath: TrustedHosts
               readOnly: true
             - name: config
-              mountPath: /etc/opendkim/silver.yaml
-              subPath: silver.yaml
+              mountPath: /etc/opendkim/opengovmail.yaml
+              subPath: opengovmail.yaml
               readOnly: true
             - name: keys
               mountPath: /etc/dkimkeys
@@ -88,11 +88,11 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: {{ include "silver-opendkim.fullname" . }}-conf
+            name: {{ include "opengovmail-opendkim.fullname" . }}-conf
         - name: keys
           {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ include "silver-opendkim.claimName" . }}
+            claimName: {{ include "opengovmail-opendkim.claimName" . }}
           {{- else }}
           emptyDir: {}
           {{- end }}

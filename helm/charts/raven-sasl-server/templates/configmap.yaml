@@ -11,9 +11,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "silver-raven-sasl.fullname" . }}-conf
+  name: {{ include "opengovmail-raven-sasl.fullname" . }}-conf
   labels:
-    {{- include "silver-raven-sasl.labels" . | nindent 4 }}
+    {{- include "opengovmail-raven-sasl.labels" . | nindent 4 }}
 data:
   raven.yaml: |
     domain: {{ .Values.config.domain }}
@@ -22,8 +22,8 @@ data:
     sasl_scope: {{ .Values.config.saslScope | quote }}
 
     # OAUTHBEARER Token Validation (RFC 7628)
-    oauth_issuer_url: {{ include "silver-raven-sasl.issuerUrl" . | quote }}
-    oauth_jwks_url: {{ include "silver-raven-sasl.jwksUrl" . | quote }}
+    oauth_issuer_url: {{ include "opengovmail-raven-sasl.issuerUrl" . | quote }}
+    oauth_jwks_url: {{ include "opengovmail-raven-sasl.jwksUrl" . | quote }}
     oauth_audience:
       {{- range .Values.config.oauth.audience }}
       - {{ . | quote }}

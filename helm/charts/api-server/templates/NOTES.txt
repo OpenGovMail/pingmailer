@@ -1,26 +1,26 @@
-silver-api-server has been installed.
+opengovmail-api-server has been installed.
 
 Release:   {{ .Release.Name }}
 Namespace: {{ .Release.Namespace }}
 Image:     {{ .Values.image.repository }}:{{ .Values.image.tag }}
-Service:   {{ include "silver-api-server.fullname" . }}:{{ .Values.service.port }} (ClusterIP, HTTP)
+Service:   {{ include "opengovmail-api-server.fullname" . }}:{{ .Values.service.port }} (ClusterIP, HTTP)
 
 ----- 1. Watch the pods -----
 
-  kubectl -n {{ .Release.Namespace }} get pod -l app.kubernetes.io/name=silver-api-server -w
-  kubectl -n {{ .Release.Namespace }} logs deploy/{{ include "silver-api-server.fullname" . }} -f
+  kubectl -n {{ .Release.Namespace }} get pod -l app.kubernetes.io/name=opengovmail-api-server -w
+  kubectl -n {{ .Release.Namespace }} logs deploy/{{ include "opengovmail-api-server.fullname" . }} -f
 
 ----- 2. Reach the API -----
 
   In-cluster (HTTP):
 
-    http://{{ include "silver-api-server.fullname" . }}:{{ .Values.service.port }}/healthcheck
+    http://{{ include "opengovmail-api-server.fullname" . }}:{{ .Values.service.port }}/healthcheck
 
 {{- if .Values.ingress.enabled }}
 
   External (TLS terminated at your Ingress controller):
 
-    kubectl -n {{ .Release.Namespace }} get ingress {{ include "silver-api-server.fullname" . }} \
+    kubectl -n {{ .Release.Namespace }} get ingress {{ include "opengovmail-api-server.fullname" . }} \
       -o jsonpath='{.spec.rules[0].host}{"\n"}'
 
   Then: https://<that-host>/healthcheck
@@ -31,7 +31,7 @@ Service:   {{ include "silver-api-server.fullname" . }}:{{ .Values.service.port 
 
   External (TLS terminated at the OpenShift Route):
 
-    oc -n {{ .Release.Namespace }} get route {{ include "silver-api-server.fullname" . }} \
+    oc -n {{ .Release.Namespace }} get route {{ include "opengovmail-api-server.fullname" . }} \
       -o jsonpath='{.spec.host}{"\n"}'
 
   Then: https://<that-host>/healthcheck
@@ -43,7 +43,7 @@ Service:   {{ include "silver-api-server.fullname" . }}:{{ .Values.service.port 
 
   For local testing, port-forward to the service:
 
-    kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "silver-api-server.fullname" . }} 8000:{{ .Values.service.port }} &
+    kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "opengovmail-api-server.fullname" . }} 8000:{{ .Values.service.port }} &
     curl http://localhost:8000/healthcheck
 {{- end }}
 

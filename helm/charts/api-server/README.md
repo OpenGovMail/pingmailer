@@ -1,7 +1,7 @@
-# silver-api-server Helm chart
+# opengovmail-api-server Helm chart
 
-Helm chart for the Pingmailer **api-server** — the public HTTP entry point
-for sending mail through the Silver stack. The Kubernetes counterpart of
+Helm chart for the OpenGovMail **api-server** — the public HTTP entry point
+for sending mail through the OpenGovMail stack. The Kubernetes counterpart of
 the `api-server` service in [docker-compose.yml](../../../docker-compose.yml).
 
 **Platform support:** This chart is portable across **vanilla Kubernetes** (EKS, GKE, AKS, etc.) and **OpenShift**, with OpenShift-specific features available as optional feature toggles.
@@ -39,9 +39,9 @@ publishes it yet. Pick one path:
 
 ```bash
 cd api-server
-docker build -t ghcr.io/<your-org>/pingmailer-api-server:0.1.0 .
+docker build -t ghcr.io/<your-org>/opengovmail-api-server:0.1.0 .
 echo $GITHUB_TOKEN | docker login ghcr.io -u <your-user> --password-stdin
-docker push ghcr.io/<your-org>/pingmailer-api-server:0.1.0
+docker push ghcr.io/<your-org>/opengovmail-api-server:0.1.0
 cd ..
 ```
 
@@ -51,12 +51,12 @@ cd ..
 # Build inside minikube's Docker daemon so the cluster can pull it
 # without going through an external registry.
 eval $(minikube docker-env)
-docker build -t pingmailer-api-server:dev ./api-server
+docker build -t opengovmail-api-server:dev ./api-server
 eval $(minikube docker-env -u)
 
 # Then in your values overlay:
 #   image:
-#     repository: pingmailer-api-server
+#     repository: opengovmail-api-server
 #     tag: dev
 #     pullPolicy: Never        # local image, never try to pull
 ```
@@ -70,7 +70,7 @@ This is the recommended setup for portable deployment.
 ```yaml
 # my-api-values.yaml
 image:
-  repository: "ghcr.io/<your-org>/pingmailer-api-server"
+  repository: "ghcr.io/<your-org>/opengovmail-api-server"
   tag: "0.1.0"
 
 ingress:
@@ -93,7 +93,7 @@ oauth2IntrospectUrl: "https://thunder.example.com/oauth2/introspect"
 
 ```bash
 helm upgrade --install api-server ./helm/charts/api-server \
-  --namespace pingmailer --create-namespace \
+  --namespace opengovmail --create-namespace \
   -f my-api-values.yaml
 ```
 
@@ -104,7 +104,7 @@ To deploy on OpenShift and use OpenShift Route:
 ```yaml
 # my-api-values-openshift.yaml
 image:
-  repository: "ghcr.io/<your-org>/pingmailer-api-server"
+  repository: "ghcr.io/<your-org>/opengovmail-api-server"
   tag: "0.1.0"
 
 ingress:
@@ -122,7 +122,7 @@ oauth2IntrospectUrl: "https://thunder.example.com/oauth2/introspect"
 
 ```bash
 helm upgrade --install api-server ./helm/charts/api-server \
-  --namespace pingmailer --create-namespace \
+  --namespace opengovmail --create-namespace \
   -f my-api-values-openshift.yaml
 ```
 
@@ -132,11 +132,11 @@ Once deployed, verify the ingress or route:
 
 ```bash
 # Kubernetes
-kubectl -n pingmailer get ingress
+kubectl -n opengovmail get ingress
 # Update DNS A-record to point at the ingress controller's IP
 
 # OpenShift
-oc -n pingmailer get route api-server
+oc -n opengovmail get route api-server
 # Router automatically handles DNS (or configure your external DNS)
 ```
 
@@ -222,7 +222,7 @@ ingress:
 
 | Key | Default | Notes |
 |---|---|---|
-| `image.repository` | `""` (**required**) | Your registry path, e.g. `ghcr.io/silver-mail-platform/pingmailer-api-server` |
+| `image.repository` | `""` (**required**) | Your registry path, e.g. `ghcr.io/opengovmail/opengovmail-api-server` |
 | `image.tag` | `""` | Defaults to Chart.appVersion (0.1.0); pin to a real version in production |
 | `containerPort` | `8000` | Port the Go server listens on inside the pod |
 | `replicaCount` | `2` | API server is stateless — scale freely |
@@ -286,7 +286,7 @@ This chart follows **best practices for open-source Helm charts**:
 ## Uninstall
 
 ```bash
-helm uninstall api-server -n pingmailer
+helm uninstall api-server -n opengovmail
 ```
 
 Nothing persistent is created by this chart — uninstall is clean.

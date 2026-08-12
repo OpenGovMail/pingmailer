@@ -1,8 +1,8 @@
 apiVersion: v2
 name: opendkim-server
 description: |
-  Helm chart for the OpenDKIM milter (ghcr.io/lsflk/silver-dkim) used by the
-  Pingmailer / Silver Mail stack. Generates per-domain DKIM signing keys on
+  Helm chart for the OpenDKIM milter (ghcr.io/opengovmail/opengovmail-dkim) used by the
+  OpenGovMail stack. Generates per-domain DKIM signing keys on
   first start, persists them in a PVC, and exposes the Milter socket on
   :8891 for Postfix to consume.
 type: application
@@ -13,9 +13,9 @@ keywords:
   - dkim
   - milter
   - email
-  - pingmailer
+  - opengovmail
 maintainers:
-  - name: LSFLK
-    url: https://github.com/lsflk
+  - name: OpenGovMail
+    url: https://github.com/OpenGovMail
 sources:
-  - https://github.com/LSFLK/silver
+  - https://github.com/OpenGovMail/opengovmail

@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# silver-api-server values
+# opengovmail-api-server values
 #
 # The api-server is a stateless Go HTTP service. It listens on a plain HTTP
 # port, exposes POST /notify and GET /healthcheck, and relays mail to whatever
@@ -24,7 +24,7 @@ replicaCount: 2 # stateless; safe to scale
 # registry the cluster can reach. See README for build commands.
 # ---------------------------------------------------------------------------
 image:
-  repository: ghcr.io/silver-mail-platform/pingmailer-api-server
+  repository: ghcr.io/opengovmail/opengovmail-api-server
   tag: ""
   pullPolicy: Always
 

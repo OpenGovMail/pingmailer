@@ -1,25 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "silver-raven-sasl.fullname" . }}
+  name: {{ include "opengovmail-raven-sasl.fullname" . }}
   labels:
-    {{- include "silver-raven-sasl.labels" . | nindent 4 }}
+    {{- include "opengovmail-raven-sasl.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "silver-raven-sasl.selectorLabels" . | nindent 6 }}
+      {{- include "opengovmail-raven-sasl.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "silver-raven-sasl.selectorLabels" . | nindent 8 }}
+        {{- include "opengovmail-raven-sasl.selectorLabels" . | nindent 8 }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      serviceAccountName: {{ include "silver-raven-sasl.serviceAccountName" . }}
+      serviceAccountName: {{ include "opengovmail-raven-sasl.serviceAccountName" . }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -71,7 +71,7 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: {{ include "silver-raven-sasl.fullname" . }}-conf
+            name: {{ include "opengovmail-raven-sasl.fullname" . }}-conf
         {{- if .Values.tlsSecret.name }}
         - name: tls
           secret:

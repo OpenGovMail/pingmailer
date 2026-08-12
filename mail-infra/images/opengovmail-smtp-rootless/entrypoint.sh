@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-CONFIG_FILE="/etc/postfix/silver.yaml"
+CONFIG_FILE="/etc/postfix/opengovmail.yaml"
 
-# --- domain from silver.yaml -------------------------------------------------
+# --- domain from opengovmail.yaml -------------------------------------------------
 MAIL_DOMAIN=$(awk '/^[[:space:]]*-[[:space:]]*domain:/ {sub(/^[[:space:]]*-[[:space:]]*domain:[[:space:]]*/, ""); print; exit}' "$CONFIG_FILE")
 if [ -z "$MAIL_DOMAIN" ] || [ "$MAIL_DOMAIN" = "null" ]; then
     echo "⚠️  Could not extract domain from $CONFIG_FILE; using example.org"

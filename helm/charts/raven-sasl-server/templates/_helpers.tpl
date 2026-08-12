@@ -1,8 +1,8 @@
-{{- define "silver-raven-sasl.name" -}}
+{{- define "opengovmail-raven-sasl.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{- define "silver-raven-sasl.fullname" -}}
+{{- define "opengovmail-raven-sasl.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -15,13 +15,13 @@
 {{- end }}
 {{- end }}
 
-{{- define "silver-raven-sasl.chart" -}}
+{{- define "opengovmail-raven-sasl.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{- define "silver-raven-sasl.labels" -}}
-helm.sh/chart: {{ include "silver-raven-sasl.chart" . }}
-{{ include "silver-raven-sasl.selectorLabels" . }}
+{{- define "opengovmail-raven-sasl.labels" -}}
+helm.sh/chart: {{ include "opengovmail-raven-sasl.chart" . }}
+{{ include "opengovmail-raven-sasl.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -29,14 +29,14 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/component: sasl
 {{- end }}
 
-{{- define "silver-raven-sasl.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "silver-raven-sasl.name" . }}
+{{- define "opengovmail-raven-sasl.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "opengovmail-raven-sasl.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{- define "silver-raven-sasl.serviceAccountName" -}}
+{{- define "opengovmail-raven-sasl.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "silver-raven-sasl.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "opengovmail-raven-sasl.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
@@ -46,7 +46,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 Derive oauth_issuer_url from config.oauth.issuerUrl if set,
 otherwise from config.domain (https://<domain>:8090).
 */}}
-{{- define "silver-raven-sasl.issuerUrl" -}}
+{{- define "opengovmail-raven-sasl.issuerUrl" -}}
 {{- if .Values.config.oauth.issuerUrl -}}
 {{ .Values.config.oauth.issuerUrl }}
 {{- else -}}
@@ -57,7 +57,7 @@ https://{{ required "config.domain is required" .Values.config.domain }}:8090
 {{/*
 Derive oauth_jwks_url similarly.
 */}}
-{{- define "silver-raven-sasl.jwksUrl" -}}
+{{- define "opengovmail-raven-sasl.jwksUrl" -}}
 {{- if .Values.config.oauth.jwksUrl -}}
 {{ .Values.config.oauth.jwksUrl }}
 {{- else -}}

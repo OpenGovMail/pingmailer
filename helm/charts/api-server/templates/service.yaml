@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "silver-api-server.fullname" . }}
+  name: {{ include "opengovmail-api-server.fullname" . }}
   labels:
-    {{- include "silver-api-server.labels" . | nindent 4 }}
+    {{- include "opengovmail-api-server.labels" . | nindent 4 }}
   {{- with .Values.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -16,4 +16,4 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "silver-api-server.selectorLabels" . | nindent 4 }}
+    {{- include "opengovmail-api-server.selectorLabels" . | nindent 4 }}

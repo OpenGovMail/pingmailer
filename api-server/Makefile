@@ -4,28 +4,28 @@ run:
 	go run . -port 8000
 
 build:
-	go build -o bin/pingmailer-api .
+	go build -o bin/opengovmail-api .
 
 clean:
 	rm -rf bin
 
 # Docker commands
 docker-build:
-	docker build -t pingmailer-api .
+	docker build -t opengovmail-api .
 
 docker-run:
 	docker run -d \
 		-p 8000:8000 \
 		-e PORT=8000 \
-		--name pingmailer-api \
-		pingmailer-api
+		--name opengovmail-api \
+		opengovmail-api
 
 docker-stop:
-	docker stop pingmailer-api || true
-	docker rm pingmailer-api || true
+	docker stop opengovmail-api || true
+	docker rm opengovmail-api || true
 
 docker-clean: docker-stop
-	docker rmi pingmailer-api || true
+	docker rmi opengovmail-api || true
 
 docker-compose-up:
 	docker-compose up -d
@@ -34,7 +34,7 @@ docker-compose-down:
 	docker-compose down
 
 docker-logs:
-	docker logs -f pingmailer-api
+	docker logs -f opengovmail-api
 
 gci:
 	golangci-lint run

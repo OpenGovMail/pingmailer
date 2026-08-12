@@ -1,14 +1,14 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "silver-opendkim.name" -}}
+{{- define "opengovmail-opendkim.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Fully qualified app name.
 */}}
-{{- define "silver-opendkim.fullname" -}}
+{{- define "opengovmail-opendkim.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -24,16 +24,16 @@ Fully qualified app name.
 {{/*
 Chart label.
 */}}
-{{- define "silver-opendkim.chart" -}}
+{{- define "opengovmail-opendkim.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels.
 */}}
-{{- define "silver-opendkim.labels" -}}
-helm.sh/chart: {{ include "silver-opendkim.chart" . }}
-{{ include "silver-opendkim.selectorLabels" . }}
+{{- define "opengovmail-opendkim.labels" -}}
+helm.sh/chart: {{ include "opengovmail-opendkim.chart" . }}
+{{ include "opengovmail-opendkim.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -44,17 +44,17 @@ app.kubernetes.io/component: opendkim
 {{/*
 Selector labels.
 */}}
-{{- define "silver-opendkim.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "silver-opendkim.name" . }}
+{{- define "opengovmail-opendkim.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "opengovmail-opendkim.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Service account name.
 */}}
-{{- define "silver-opendkim.serviceAccountName" -}}
+{{- define "opengovmail-opendkim.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "silver-opendkim.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "opengovmail-opendkim.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
@@ -63,11 +63,11 @@ Service account name.
 {{/*
 PVC claim name (existing or chart-managed).
 */}}
-{{- define "silver-opendkim.claimName" -}}
+{{- define "opengovmail-opendkim.claimName" -}}
 {{- if .Values.persistence.existingClaim }}
 {{- .Values.persistence.existingClaim }}
 {{- else }}
-{{- printf "%s-keys" (include "silver-opendkim.fullname" .) }}
+{{- printf "%s-keys" (include "opengovmail-opendkim.fullname" .) }}
 {{- end }}
 {{- end }}
 
@@ -75,7 +75,7 @@ PVC claim name (existing or chart-managed).
 Normalize a single domain entry to a dict with domain/selector/keySize.
 Pass the entry as the context.
 */}}
-{{- define "silver-opendkim.domain" -}}
+{{- define "opengovmail-opendkim.domain" -}}
 {{- $entry := . -}}
 {{- $selector := default "mail" $entry.selector -}}
 {{- $keySize := default 2048 $entry.keySize -}}

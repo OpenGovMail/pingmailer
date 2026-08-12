@@ -1,6 +1,6 @@
 name: Publish Helm chart
 
-# Packages the pingmailer umbrella chart and pushes it to GHCR as an OCI
+# Packages the opengovmail umbrella chart and pushes it to GHCR as an OCI
 # artifact, using the same release that publishes the container images.
 #
 # Release flow:
@@ -63,7 +63,7 @@ jobs:
       - name: Render smoke test
         run: |
           # The example values must produce a complete, parseable manifest.
-          helm template pingmailer ./helm -f helm/values.example.yaml > /tmp/rendered.yaml
+          helm template opengovmail ./helm -f helm/values.example.yaml > /tmp/rendered.yaml
           count=$(grep -c '^kind:' /tmp/rendered.yaml)
           echo "Rendered $count resources"
           if [ "$count" -lt 15 ]; then
@@ -73,7 +73,7 @@ jobs:
           # The required-value guards must still fire when values are absent,
           # otherwise a misconfigured install would fail in-cluster instead of
           # at render time.
-          if helm template pingmailer ./helm >/dev/null 2>&1; then
+          if helm template opengovmail ./helm >/dev/null 2>&1; then
             echo "::error::Chart rendered with no values — required-value guards are broken."
             exit 1
           fi
@@ -98,7 +98,7 @@ jobs:
           # Charts go in their own namespace so they don't collide with the
           # image packages in the same org.
           owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          helm push "dist/pingmailer-${{ steps.v.outputs.version }}.tgz" \
+          helm push "dist/opengovmail-${{ steps.v.outputs.version }}.tgz" \
             "oci://${{ env.REGISTRY }}/${owner}/charts"
 
       - name: Summary
@@ -106,26 +106,26 @@ jobs:
           owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           v="${{ steps.v.outputs.version }}"
           {
-            echo "### Helm chart \`pingmailer\` $v"
+            echo "### Helm chart \`opengovmail\` $v"
             echo
             if [ "${{ github.event_name }}" = "pull_request" ]; then
               echo "Dry run — lint, render and package passed. Nothing pushed."
             else
-              echo "Published to \`oci://${{ env.REGISTRY }}/${owner}/charts/pingmailer\`"
+              echo "Published to \`oci://${{ env.REGISTRY }}/${owner}/charts/opengovmail\`"
               echo
               echo '```bash'
-              echo "helm install pingmailer \\"
-              echo "  oci://${{ env.REGISTRY }}/${owner}/charts/pingmailer \\"
+              echo "helm install opengovmail \\"
+              echo "  oci://${{ env.REGISTRY }}/${owner}/charts/opengovmail \\"
               echo "  --version $v -n <namespace> -f my-values.yaml"
               echo '```'
               echo
               echo "> New GHCR packages are **private** by default. Make the package"
-              echo "> public under Packages → pingmailer → Package settings, or"
+              echo "> public under Packages → opengovmail → Package settings, or"
               echo "> consumers must \`helm registry login ghcr.io\` first."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: pingmailer-chart-${{ steps.v.outputs.version }}
+          name: opengovmail-chart-${{ steps.v.outputs.version }}
           path: dist/*.tgz
