@@ -1,0 +1,499 @@
+# Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+#
+# WSO2 LLC. licenses this file to you under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except
+# in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied. See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+deployment:
+  replicaCount: 2
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  securityContext:
+    readOnlyRootFilesystem: true # This must be false if sqlite is used as the database
+    enableRunAsUser: true
+    runAsUser: 10001
+    enableRunAsGroup: true
+    runAsGroup: 10001
+    enableFsGroup: true
+    fsGroup: 10001
+    seccompProfile:
+      enabled: false
+      type: "RuntimeDefault"
+  # Pod termination grace period. K8s API server waits this period after pre stop hook and sending TERM signal
+  terminationGracePeriodSeconds: 10
+  image:
+    # -- Container image registry host name
+    registry: "ghcr.io/asgardeo"
+    # -- Container image repository name
+    repository: "thunder"
+    # -- Container image digest
+    digest: ""
+    # -- Container image tag. Either "tag" or "digest" should be defined
+    tag: "latest"
+    pullPolicy: "Always"
+  startupProbe:
+    initialDelaySeconds: 1
+    periodSeconds: 2
+    failureThreshold: 30
+  livenessProbe:
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 1
+    periodSeconds: 10
+  container:
+    port: 8090
+  resources:
+    limits:
+      cpu: 200m
+      memory: 100Mi
+    requests:
+      cpu: 100m
+      memory: 50Mi
+  # Controls the THUNDER_SKIP_SECURITY environment variable. Set this to true only
+  # in non-production environments for testing purposes to bypass REST API security checks.
+  skipSecurity: false
+  # Additional environment variables with plain values.
+  # Example:
+  # env:
+  #   - name: LOG_LEVEL
+  #     value: debug
+  #   - name: EXTERNAL_API_BASE_URL
+  #     value: https://api.example.com
+  env: []
+  # Additional environment variables sourced from existing Kubernetes Secrets.
+  # Example:
+  # secretEnv:
+  #   - name: EXTERNAL_API_TOKEN
+  #     secretName: thunder-runtime-secrets
+  #     secretKey: external-api-token
+  #     optional: false
+  secretEnv: []
+
+hpa:
+  enabled: true
+  maxReplicas: 10
+  averageUtilizationCPU: 65
+  averageUtilizationMemory: 75
+
+pdb:
+  minAvailable: "50%"
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "thunder-service-account"
+  create: true
+
+service:
+  port: 8090
+
+ingress:
+  enabled: true
+  className: "nginx"
+  commonAnnotations: &commonAnnotations
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 64k
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    nginx.ingress.kubernetes.io/session-cookie-conditional-samesite-none: "true"
+    nginx.ingress.kubernetes.io/session-cookie-hash: sha1
+    nginx.ingress.kubernetes.io/session-cookie-name: paf
+    nginx.ingress.kubernetes.io/session-cookie-path: /
+    nginx.ingress.kubernetes.io/session-cookie-samesite: None
+  customAnnotations: &customAnnotations
+    {}
+  combinedAnnotations:
+    !!merge <<: *commonAnnotations
+    !!merge <<: *customAnnotations
+  hostname: thunder.local
+  paths:
+    - path: /
+      pathType: Prefix
+  tlsSecretsName: "thunder-tls"
+
+# Gateway API configuration (Envoy Gateway)
+gateway:
+  enabled: false
+  name: "thunder-gateway"
+  className: "eg"
+  tls:
+    enabled: true
+    secretName: "thunder-tls"
+    mode: Terminate
+
+# Gateway API HTTPRoute configuration (alternative to Ingress)
+httproute:
+  enabled: false
+  annotations: {}
+  # parentRefs specify which Gateway(s) this route attaches to
+  parentRefs:
+    - name: "thunder-gateway"
+    #   namespace: gateway-ns
+  hostnames: []
+    # - thunder.example.com
+
+# Thunder specific configurations
+configuration:
+  # Server configuration
+  server:
+    port: 8090
+    httpOnly: false
+    publicUrl: "https://thunder.local"
+
+  # Gate client configuration
+  gateClient:
+    hostname: "thunder.local"
+    port: 443
+    scheme: "https"
+    path: "/gate"
+
+  # Console client configuration
+  consoleClient:
+    path: "/console"
+    clientId: "CONSOLE"
+    scopes: "['openid', 'profile', 'email', 'ou', 'system', 'system:user', 'system:group', 'system:ou:view', 'system:userschema:view']"
+
+  # TLS configuration
+  tls:
+    minVersion: "1.3"
+    certFile: "repository/resources/security/server.cert"
+    keyFile: "repository/resources/security/server.key"
+
+  # Crypto configuration
+  crypto:
+    encryption:
+      # WARNING: Replace the default key with a 32-byte (64 character) hex string in production deployments
+      key: "file://repository/resources/security/crypto.key"
+    passwordHashing:
+      algorithm: "PBKDF2"
+      argon2id:
+        iterations: 2
+        memory: 19456
+        parallelism: 1
+        key_size: 32
+        salt_size: 16
+      pbkdf2:
+        iterations: 600000
+        key_size: 32
+        salt_size: 16
+      sha256:
+        salt_size: 16
+    keys:
+      - id: "default-key"
+        certFile: "repository/resources/security/signing.cert"
+        keyFile: "repository/resources/security/signing.key"
+
+  # Database configuration
+  database:
+    config:
+      # WARNING: Use sqlite only if you are running a single pod.
+      type: "postgres" # postgres or sqlite
+      # Below two parameters are only required for sqlite
+      sqlitePath: "repository/database/configdb.db" # Only required for sqlite
+      sqliteOptions: "_journal_mode=WAL&_busy_timeout=5000&_pragma=foreign_keys(1)" # Only required for sqlite
+      # Below parameters are only required for Postgres
+      name: "configdb" 
+      host: "localhost" 
+      port: "5432" 
+      username: "asgthunder"
+      password: "asgthunder"
+      sslmode: "require"
+      max_open_conns: 500
+      max_idle_conns: 100
+      conn_max_lifetime: 3600
+    # Runtime database configuration
+    runtime:
+      # WARNING: Use sqlite only if you are running a single pod.
+      type: "postgres" # postgres or sqlite
+      # Below two parameters are only required for sqlite
+      sqlitePath: "repository/database/runtimedb.db" # Only required for sqlite
+      sqliteOptions: "_journal_mode=WAL&_busy_timeout=5000&_pragma=foreign_keys(1)" # Only required for sqlite
+      # Below parameters are only required for Postgres
+      name: "runtimedb" 
+      host: "localhost" 
+      port: "5432" 
+      username: "asgthunder"
+      password: "asgthunder" 
+      sslmode: "require"
+      max_open_conns: 500
+      max_idle_conns: 100
+      conn_max_lifetime: 3600 
+    user:
+      # WARNING: Use sqlite only if you are running a single pod.
+      type: "postgres" # postgres or sqlite
+      # Below two parameters are only required for sqlite
+      sqlitePath: "repository/database/userdb.db" # Only required for sqlite
+      sqliteOptions: "_journal_mode=WAL&_busy_timeout=5000&_pragma=foreign_keys(1)" # Only required for sqlite
+      # Below parameters are only required for Postgres
+      name: "userdb" 
+      host: "localhost" 
+      port: "5432" 
+      username: "asgthunder"
+      password: "asgthunder" 
+      sslmode: "require"
+      max_open_conns: 500
+      max_idle_conns: 100
+      conn_max_lifetime: 3600 
+
+  # Cache configuration
+  cache:
+    disabled: true
+    type: "inmemory"
+    size: 1000
+    ttl: 3600
+    evictionPolicy: "LRU"
+    cleanupInterval: 300
+    redis:
+      address: "localhost:6379"
+      username: ""
+      password: ""
+      db: 0
+      keyPrefix: "thunder"
+
+  # Token Configuration
+  jwt:
+    issuer: ""  # Optional. Derived from server's URL if not set.
+    validityPeriod: 3600
+    audience: "application"
+    # This must match the key ID defined in the crypto.keys section
+    preferredKeyId: "default-key"
+
+  # OAuth configuration
+  oauth:
+    refreshToken:
+      renewOnGrant: false
+      validityPeriod: 86400
+    authorizationCode:
+      validityPeriod: 600
+    dcr:
+      insecure: false
+
+  # Flow configuration
+  flow:
+    defaultAuthFlowHandle: "default-basic-flow"
+    maxVersionHistory: 3
+    autoInferRegistration: true
+
+  # CORS configuration
+  cors:
+    allowedOrigins:
+      - "https://localhost:3000"
+
+  # Passkey configuration
+  passkey:
+    allowedOrigins:
+      - "https://localhost:8090"
+
+  # Consent configuration
+  consent:
+    enabled: true
+    baseUrl: "http://localhost:9090/api/v1"
+    timeout: 5
+    maxRetries: 3
+    server:
+      port: 9090
+      hostname: "localhost"
+    database:
+      # WARNING: Use sqlite only if you are running a single pod.
+      type: "postgres" # postgres or sqlite
+      # Below two parameters are only required for sqlite
+      sqlitePath: "repository/database/consentdb.db" # Only required for sqlite
+      sqliteOptions: "_pragma=journal_mode(WAL)&_pragma=cache_size(-16000)" # Only required for sqlite
+      # Below parameters are only required for Postgres
+      name: "consentdb"
+      host: "localhost"
+      port: "5432"
+      username: "asgthunder"
+      password: "asgthunder"
+      sslmode: "require"
+      max_open_conns: 500
+      max_idle_conns: 100
+      conn_max_lifetime: "3600s"
+
+# Persistence configuration for SQLite databases
+# Only relevant when using SQLite as the database type
+persistence:
+  enabled: false
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  annotations: {}
+
+# Declarative resources mount configuration.
+# Mounts files under Thunder's repository/resources directory.
+declarativeResources:
+  # Enable mounting declarative resources into Thunder pods.
+  enabled: false
+  # Mount path inside Thunder container.
+  mountPath: /opt/thunder/repository/resources
+  # Mount resources as read-only.
+  readOnly: true
+  # Source from an existing ConfigMap.
+  # When 'items' is empty, all keys are mounted.
+  # Each item supports either:
+  #   - string: key and path are the same
+  #   - object: explicit key/path mapping
+  configMap:
+    # Name of an existing ConfigMap in the same namespace.
+    # Example: thunder-declarative-resources (see install/helm/examples/declarative-resources-configmap.yaml)
+    name: ""
+    items: []
+    # Example — references the bundled sample ConfigMap:
+    # name: thunder-declarative-resources
+    # items:
+    #   - key: my-web-app
+    #     path: applications/my-web-app.yaml
+    #     mountPath: /opt/thunder/repository/resources/applications/my-web-app.yaml
+    #   - key: google-idp
+    #     path: identity_providers/google.yaml
+    #     mountPath: /opt/thunder/repository/resources/identity_providers/google.yaml
+    #   - key: default-org
+    #     path: organization_units/default.yaml
+    #     mountPath: /opt/thunder/repository/resources/organization_units/default.yaml
+  # Source from an existing Secret.
+  # Use this when resource files contain sensitive values (e.g. pre-substituted secrets).
+  # Supports the same string/object item formats as configMap above.
+  secret:
+    name: ""
+    items: []
+    # Example:
+    # name: thunder-declarative-resources-secret
+    # items:
+    #   - key: my-app-with-secrets
+    #     path: applications/my-app.yaml
+    #     mountPath: /opt/thunder/repository/resources/applications/my-app.yaml
+    #   - key: google-idp
+    #     path: identity_providers/google.yaml
+    #     mountPath: /opt/thunder/repository/resources/identity_providers/google.yaml
+
+# Setup Job configuration
+# Runs setup.sh as a one-time initialization job during Helm install
+setup:
+  # Enable setup job (runs on first install only via Helm hook)
+  enabled: true
+  # Number of retries if setup fails
+  backoffLimit: 3
+  # Whether to preserve the setup job after completion
+  # When false: Job is deleted immediately on success, and after ttlSecondsAfterFinished on failure
+  # When true: Job is kept indefinitely (ttlSecondsAfterFinished is not applied)
+  preserveJob: false
+  # Time to keep failed jobs after completion (seconds, 0 = indefinite)
+  # Only applies when preserveJob=false. Successful jobs are deleted immediately via hook-delete-policy.
+  ttlSecondsAfterFinished: 86400  # 24 hours
+  # Enable debug mode for setup
+  debug: false
+  # Additional command-line arguments for setup.sh
+  args: []
+    # Example:
+    # - "--debug"
+  # Additional environment variables for setup job
+  env: []
+    # Example:
+    # - name: BOOTSTRAP_FAIL_FAST
+    #   value: "true"
+    # - name: BOOTSTRAP_SKIP_PATTERN
+    #   value: "test"
+  # Additional environment variables sourced from existing Kubernetes Secrets.
+  # Example:
+  # secretEnv:
+  #   - name: BOOTSTRAP_API_KEY
+  #     secretName: thunder-setup-secrets
+  #     secretKey: bootstrap-api-key
+  #     optional: false
+  secretEnv: []
+  # Resource limits for setup job
+  resources:
+    limits:
+      cpu: 200m
+      memory: 100Mi
+    requests:
+      cpu: 100m
+      memory: 50Mi
+  # Additional volume mounts for setup job
+  extraVolumeMounts: []
+    # Example:
+    # - name: secrets
+    #   mountPath: /run/secrets
+    #   readOnly: true
+  # Additional volumes for setup job
+  extraVolumes: []
+    # Example:
+    # - name: secrets
+    #   secret:
+    #     secretName: thunder-secrets
+
+# Bootstrap configuration
+# Custom bootstrap scripts extend Thunder's setup process by adding initialization logic.
+#
+# ⚠️ IMPORTANT: Bootstrap patterns are MUTUALLY EXCLUSIVE
+#   Choose ONE pattern only. Using both 'scripts' and 'configMap' will fail validation.
+#
+#   - Pattern 1: Use 'scripts' for inline scripts
+#   - Pattern 2 OR 3: Use 'configMap' (with or without 'files')
+#
+bootstrap:
+  # Pattern 1: Inline bootstrap scripts (key: filename, value: script content)
+  # Each script will be mounted individually using subPath to preserve default scripts
+  scripts: {}
+    # Example - Creating custom users:
+    # 20-custom-users.sh: |
+    #   #!/bin/bash
+    #   set -e
+    #   # Source common functions (provides log_* and thunder_api_call)
+    #   SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
+    #   source "${SCRIPT_DIR}/common.sh"
+    #
+    #   log_info "Creating custom users..."
+    #   thunder_api_call POST "/users" '{
+    #     "type": "person",
+    #     "attributes": {
+    #       "username": "alice",
+    #       "password": "alice123",
+    #       "sub": "alice",
+    #       "email": "alice@example.com",
+    #       "name": "Alice Johnson"
+    #     }
+    #   }'
+    #   log_success "Custom users created"
+    #
+  # Pattern 2 & 3: Reference an external ConfigMap with bootstrap scripts
+  #
+  # Behavior depends on whether 'files' is specified:
+  # - WITH files list: Mounts only specified files (preserves defaults) - Pattern 2
+  # - WITHOUT files (empty/omitted): Mounts entire ConfigMap (replaces all defaults) - Pattern 3
+  #
+  # Example 1 - Pattern 2: Add specific scripts (preserves defaults)
+  #   configMap:
+  #     name: "my-bootstrap"
+  #     files:
+  #       - 30-custom-users.sh
+  #       - 40-custom-apps.sh
+  #
+  # Example 2 - Pattern 3: Replace all scripts
+  #   configMap:
+  #     name: "complete-bootstrap"
+  #     # No files = replaces all defaults (must provide your own common.sh)
+  #
+  configMap:
+    # Name of the ConfigMap containing bootstrap scripts
+    name: ""
+    # List of script filenames to mount from the ConfigMap
+    # If empty/omitted: mounts entire ConfigMap (replaces all defaults - Pattern 3)
+    # If specified: mounts only these files (preserves defaults - Pattern 2)
+    files: []
