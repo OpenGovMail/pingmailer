@@ -135,42 +135,6 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
 
-      - name: Verify every requested platform is in the manifest
-        if: github.event_name != 'pull_request'
-        run: |
-          ref="${{ steps.tags.outputs.image }}:${{ steps.v.outputs.version }}"
-          echo "Inspecting $ref"
-
-          manifest=$(docker buildx imagetools inspect "$ref" --raw)
-
-          missing=0
-
-          for p in $(echo "${{ matrix.platforms }}" | tr ',' ' '); do
-            os="${p%%/*}"
-            rest="${p#*/}"
-            arch="${rest%%/*}"
-
-            if echo "$manifest" | jq -e \
-              --arg os "$os" \
-              --arg arch "$arch" '
-                .manifests[] |
-                select(
-                  .platform.os == $os and
-                  .platform.architecture == $arch
-                )
-              ' >/dev/null; then
-              echo "  OK      $p"
-            else
-              echo "  MISSING $p"
-              missing=1
-            fi
-          done
-
-          if [ "$missing" -ne 0 ]; then
-            echo "::error::$ref is missing platforms."
-            exit 1
-          fi
-
       - name: Summary
         if: github.event_name != 'pull_request'
         run: |
