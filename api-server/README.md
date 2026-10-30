@@ -72,6 +72,33 @@ API forwards this token to SMTP using XOAUTH2 and does not validate it locally.
 | `app_name` | string | "Application" | Application name for email template |
 | `template` | string | - | Custom email template |
 | `template_data` | object | - | Data for custom template |
+| `subject` | string | - | Subject, sent as written (see [Content as written](#content-as-written)) |
+| `text_body` | string | - | Plain-text body, sent as written |
+| `html_body` | string | - | HTML body, sent as written |
+
+## Content as written
+
+A caller that renders its own email sends `subject` with `text_body`,
+`html_body` or both, and PingMailer sends them as they are: no template is
+applied and nothing is escaped. At least one body is required, and these
+fields can't be combined with `template` (400). With both bodies the email is
+`multipart/alternative`; with one, it has that body alone.
+
+```bash
+curl -X POST http://your-host:8000/notify \
+  -H "Authorization: Bearer <access-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "smtp_host": "smtp-server",
+    "smtp_port": 587,
+    "smtp_username": "noreply@domain.com",
+    "smtp_sender": "noreply@domain.com",
+    "recipients": [{ "email": "user@example.com" }],
+    "subject": "Your application is under review",
+    "text_body": "Dear Tom & Jerry, your application is under review.",
+    "html_body": "<p>Dear Tom &amp; Jerry, your application is under review.</p>"
+  }'
+```
 
 ## Custom Templates
 
@@ -79,7 +106,10 @@ You can use custom email templates by providing the `template` and `template_dat
 
 ### Template Format
 
-Templates use Go's `text/template` syntax with three parts:
+Templates use Go's `html/template` syntax with three parts. Values from
+`template_data` are HTML-escaped in all three, the subject and plain-text body
+included, so a caller with content of its own sends it
+[as written](#content-as-written) instead.
 
 ```go
 {{define "subject"}}Your Subject Here{{end}}

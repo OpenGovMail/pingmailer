@@ -45,6 +45,18 @@ type notifyRequest struct {
 	AppName        string         `json:"app_name"`
 	Template       string         `json:"template,omitempty"`      // Optional: custom template content
 	TemplateData   map[string]any `json:"template_data,omitempty"` // Optional: custom template data
+	// Optional: the email's content as it is sent, with no template applied.
+	// Set instead of template; at least one of text_body and html_body is
+	// required with it.
+	Subject  string `json:"subject,omitempty"`
+	TextBody string `json:"text_body,omitempty"`
+	HTMLBody string `json:"html_body,omitempty"`
+}
+
+// hasContent reports whether the request carries its content as written
+// rather than through a template.
+func (r notifyRequest) hasContent() bool {
+	return r.Subject != "" || r.TextBody != "" || r.HTMLBody != ""
 }
 
 func (app *App) handleNotify(w http.ResponseWriter, r *http.Request) {
@@ -126,6 +138,14 @@ func validateNotifyRequest(w http.ResponseWriter, req notifyRequest) bool {
 		return false
 	}
 
+	if req.hasContent() {
+		if !required(req.Template == "", "template cannot be combined with subject, text_body or html_body") {
+			return false
+		}
+		if !required(req.TextBody != "" || req.HTMLBody != "", "Missing required field: text_body or html_body") {
+			return false
+		}
+	}
 	if _, err := mail.ParseAddress(req.SMTPSender); err != nil {
 		http.Error(w, "Invalid smtp_sender email format: "+err.Error(), http.StatusBadRequest)
 		return false
@@ -192,6 +212,13 @@ func sendNotifyEmail(mailer emailer.Mailer, req notifyRequest, recipients []user
 	var sendErrors []error
 
 	for _, recipient := range recipients {
+		if req.hasContent() {
+			msg := emailer.Message{Subject: req.Subject, TextBody: req.TextBody, HTMLBody: req.HTMLBody}
+			if err := mailer.SendMessage(recipient.Email, msg); err != nil {
+				sendErrors = append(sendErrors, fmt.Errorf("recipient %s: %w", recipient.Email, err))
+			}
+			continue
+		}
 		if req.Template == "" {
 			if err := mailer.Send(recipient.Email, "welcome.tmpl", recipient); err != nil {
 				sendErrors = append(sendErrors, fmt.Errorf("recipient %s: %w", recipient.Email, err))

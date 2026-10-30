@@ -87,43 +87,70 @@ func (m Mailer) SendWithCustomTemplate(recipient, templateContent string, data a
 	return m.send(recipient, tmpl, data)
 }
 
-// send is an internal method that handles the common email sending logic.
-// It executes the template blocks and sends the email via SMTP.
+// Message is an email's content as it is sent: no template is applied to it.
+// At least one of TextBody and HTMLBody is set.
+type Message struct {
+	Subject  string
+	TextBody string
+	HTMLBody string
+}
+
+// SendMessage delivers msg to the recipient as written. A message with both
+// bodies is sent as multipart/alternative; one with a single body is sent with
+// that body alone.
+func (m Mailer) SendMessage(recipient string, msg Message) error {
+	if msg.TextBody == "" && msg.HTMLBody == "" {
+		return errors.New("message has no body")
+	}
+	return m.deliver(m.build(recipient, msg))
+}
+
+// send renders the template's "subject", "plainBody" and "htmlBody" blocks
+// with data and delivers the result.
 func (m Mailer) send(recipient string, tmpl *template.Template, data any) error {
-	subject := new(bytes.Buffer)
-	err := tmpl.ExecuteTemplate(subject, "subject", data)
-	if err != nil {
-		return err
+	var msg Message
+	for _, block := range []struct {
+		name string
+		out  *string
+	}{{"subject", &msg.Subject}, {"plainBody", &msg.TextBody}, {"htmlBody", &msg.HTMLBody}} {
+		buf := new(bytes.Buffer)
+		if err := tmpl.ExecuteTemplate(buf, block.name, data); err != nil {
+			return err
+		}
+		*block.out = buf.String()
 	}
+	return m.deliver(m.build(recipient, msg))
+}
 
-	plainBody := new(bytes.Buffer)
-	err = tmpl.ExecuteTemplate(plainBody, "plainBody", data)
-	if err != nil {
-		return err
-	}
-
-	htmlBody := new(bytes.Buffer)
-	err = tmpl.ExecuteTemplate(htmlBody, "htmlBody", data)
-	if err != nil {
-		return err
-	}
-
-	msg := mail.NewMessage()
-	msg.SetHeader("To", recipient)
+// build assembles the email for one recipient.
+func (m Mailer) build(recipient string, msg Message) *mail.Message {
+	out := mail.NewMessage()
+	out.SetHeader("To", recipient)
 	if m.senderName != "" {
 		// smtp_username, address (and SMTP/XOAUTH2 identity) from smtp_sender.
-		msg.SetAddressHeader("From", m.sender, m.senderName)
+		out.SetAddressHeader("From", m.sender, m.senderName)
 	} else {
-		msg.SetHeader("From", m.sender)
+		out.SetHeader("From", m.sender)
 	}
-	msg.SetHeader("Subject", subject.String())
-	msg.SetBody("text/plain", plainBody.String())
-	msg.AddAlternative("text/html", htmlBody.String())
+	out.SetHeader("Subject", msg.Subject)
+	switch {
+	case msg.TextBody != "" && msg.HTMLBody != "":
+		out.SetBody("text/plain", msg.TextBody)
+		out.AddAlternative("text/html", msg.HTMLBody)
+	case msg.HTMLBody != "":
+		out.SetBody("text/html", msg.HTMLBody)
+	default:
+		out.SetBody("text/plain", msg.TextBody)
+	}
+	return out
+}
 
-	// retry sending mail logic
+// deliver sends the email, retrying a failed attempt.
+func (m Mailer) deliver(msg *mail.Message) error {
 	const maxRetries = 3
 	const retrySleep = 500 * time.Millisecond
 
+	var err error
 	for i := range maxRetries {
 		err = m.dialer.DialAndSend(msg)
 		if err == nil {
