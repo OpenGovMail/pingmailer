@@ -61,6 +61,14 @@ RUN set -eux; \
     # null because every master.cf service has chroot=n). ---
     sed -i 's/if (user_name != 0)/if (user_name != 0 \&\& getuid() == 0)/' src/util/chroot_uid.c; \
     test "$(grep -c 'getuid() == 0' src/util/chroot_uid.c)" = "2"; \
+    # --- (4) Kernel 7.x build hosts: makedefs derives SYSTYPE from `uname -r`
+    # (the host kernel, even inside docker build) and Postfix 3.7 only knows
+    # Linux 1-6, so it aborts with "Unknown system type". Teach makedefs and
+    # sys_defs.h about LINUX7; it uses the same definitions as LINUX3-6. ---
+    sed -i 's/^Linux\.\[3456\]\.\*)/Linux.[34567].*)/' makedefs; \
+    sed -i 's/|| defined(LINUX6)/|| defined(LINUX6) || defined(LINUX7)/' src/util/sys_defs.h; \
+    grep -q '^Linux\.\[34567\]\.\*)' makedefs; \
+    grep -q 'defined(LINUX7)' src/util/sys_defs.h; \
     dpkg-buildpackage -us -uc -b
 
 # ----------------------------------------------------------------------------
