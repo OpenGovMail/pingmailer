@@ -1,0 +1,49 @@
+silver-thunder has been installed.
+
+Release:   {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+Image:     {{ .Values.thunder.deployment.image.registry }}/{{ .Values.thunder.deployment.image.repository }}:{{ .Values.thunder.deployment.image.tag }}
+
+{{- if not .Values.thunder.ingress.hostname }}
+
+WARNING: thunder.ingress.hostname is empty. The Ingress will render without
+a host — set it via -f my-thunder-values.yaml before this is reachable.
+{{- end }}
+{{- if not .Values.thunder.configuration.server.publicUrl }}
+
+WARNING: thunder.configuration.server.publicUrl is empty. Thunder will
+advertise an empty public URL in its OAuth metadata — set it before any
+external client tries to authenticate.
+{{- end }}
+
+----- 1. Watch the one-time setup job -----
+
+  kubectl -n {{ .Release.Namespace }} get jobs -w
+  kubectl -n {{ .Release.Namespace }} logs job/$(kubectl -n {{ .Release.Namespace }} get jobs -o name | grep thunder-setup | head -1) -f
+
+The setup job runs the chart's built-in 10-* defaults followed by this
+chart's 20-default-resources.sh and 30-sample-resources.sh (mounted
+from the `thunder-bootstrap` ConfigMap).
+
+----- 2. Watch the Thunder pod -----
+
+  kubectl -n {{ .Release.Namespace }} get pod -l app.kubernetes.io/name=thunder -w
+  kubectl -n {{ .Release.Namespace }} logs deploy/{{ .Release.Name }}-thunder -f
+
+----- 3. Reach the API -----
+
+{{- $port := dig "service" "port" 8090 .Values.thunder -}}
+  Service: {{ .Release.Name }}-thunder:{{ $port }}
+{{- if .Values.thunder.ingress.hostname }}
+  Ingress: https://{{ .Values.thunder.ingress.hostname }}
+{{- end }}
+
+  # Smoke test via port-forward:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-thunder 8090:{{ $port }} &
+  curl -k https://localhost:8090/health
+
+----- 4. Upgrade -----
+
+  helm upgrade --install {{ .Release.Name }} ./mail-infra/helm/thunder \
+    --namespace {{ .Release.Namespace }} \
+    -f my-thunder-values.yaml

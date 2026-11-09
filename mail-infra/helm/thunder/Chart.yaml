@@ -1,0 +1,38 @@
+apiVersion: v2
+name: silver-thunder
+description: |
+  Umbrella Helm chart for WSO2 Thunder v0.32.0 (identity / OAuth server)
+  used by the Pingmailer / Silver Mail stack. Vendors the upstream
+  `thunder` chart at v0.32.0 under charts/thunder/ and bakes this repo's
+  bootstrap scripts into a ConfigMap so a single
+  `helm install thunder ./mail-infra/helm/thunder` provisions Thunder
+  with the default + sample resources matching the docker-compose flow.
+type: application
+version: 0.1.0
+appVersion: "0.32.0"
+
+keywords:
+  - thunder
+  - identity
+  - oauth
+  - pingmailer
+
+maintainers:
+  - name: LSFLK
+    url: https://github.com/lsflk
+
+sources:
+  - https://github.com/thunder-id/thunderid/tree/v0.32.0/install/helm
+  - https://github.com/LSFLK/silver
+
+# The `thunder` subchart is vendored directly under charts/thunder/ (see
+# README — "Vendored subchart"). Declaring it here keeps `helm lint`
+# happy; the empty repository tells Helm to read the local copy without
+# attempting to fetch. No `helm dependency build` step is required.
+dependencies:
+  - name: thunder
+    version: 0.32.0
+    # `file://.` is a no-op pointer that satisfies the schema check —
+    # the subchart is already present under charts/thunder/, so Helm
+    # never actually fetches from this repository.
+    repository: "file://."

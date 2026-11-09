@@ -1,0 +1,24 @@
+# Minimal overrides for the silver-thunder umbrella chart.
+# Copy to a private file (e.g. my-thunder-values.yaml) and DO NOT commit
+# the result.
+#
+#   helm upgrade --install thunder ./mail-infra/helm/thunder \
+#     --namespace pingmailer --create-namespace \
+#     -f my-thunder-values.yaml
+
+thunder:
+  configuration:
+    server:
+      publicUrl: "https://thunder.example.com"
+    gateClient:
+      hostname: "thunder.example.com"
+    cors:
+      allowedOrigins:
+        - "https://thunder.example.com"
+    passkey:
+      allowedOrigins:
+        - "https://thunder.example.com"
+
+  ingress:
+    hostname: "thunder.example.com"
+    tlsSecretsName: "thunder-tls"          # e.g. produced by the silver-certificates chart

@@ -1,0 +1,133 @@
+# ---------------------------------------------------------------------------
+# silver-thunder values
+#
+# This umbrella chart wraps the upstream `thunder` chart v0.32.0 (vendored
+# under charts/thunder/ — no Helm dependency fetch needed) and pre-bakes:
+#   - A bootstrap ConfigMap (`thunder-bootstrap`) containing this repo's
+#     20-default-resources.sh + 30-sample-resources.sh.
+#   - Subchart defaults that make SQLite + single-pod + persistence work
+#     out of the box (the upstream defaults assume Postgres + HPA).
+#
+# Sensitive values (hostname, TLS Secret name) are left empty here. Set
+# them at install/upgrade time via -f my-values.yaml or --set, e.g.:
+#
+#   helm upgrade --install thunder ./mail-infra/helm/thunder \
+#     --namespace pingmailer --create-namespace \
+#     -f my-thunder-values.yaml
+# ---------------------------------------------------------------------------
+
+nameOverride: ""
+fullnameOverride: ""
+
+# ---------------------------------------------------------------------------
+# Pass-through values for the vendored `thunder` subchart. The key MUST stay
+# `thunder` because that is the subchart's Chart.yaml name.
+# ---------------------------------------------------------------------------
+thunder:
+
+  # ---------------------------------------------------------------------
+  # Deployment shape — SQLite-friendly defaults.
+  # ---------------------------------------------------------------------
+  deployment:
+    replicaCount: 1                       # SQLite is single-writer.
+    securityContext:
+      readOnlyRootFilesystem: false       # SQLite needs to write its WAL.
+    image:
+      # Pinned to match this repo's docker-compose Thunder version.
+      registry: ghcr.io/asgardeo
+      repository: thunder
+      tag: "0.32.0"
+      pullPolicy: IfNotPresent
+
+  # No autoscaling — SQLite locks would race.
+  hpa:
+    enabled: false
+
+  # PersistentVolumeClaim for the SQLite databases.
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 2Gi
+
+  # ---------------------------------------------------------------------
+  # Thunder server config (mirrors mail-infra/services/silver-config/thunder/deployment.yaml).
+  # REPLACE the hostname-bearing fields at install time.
+  # ---------------------------------------------------------------------
+  configuration:
+    server:
+      port: 8090
+      httpOnly: false
+      publicUrl: ""                       # REPLACE — e.g. https://thunder.example.com
+
+    gateClient:
+      hostname: ""                        # REPLACE — usually the same host as publicUrl
+      port: 443
+      scheme: "https"
+      path: "/gate"
+
+    tls:
+      minVersion: "1.3"                   # matches this repo's deployment.yaml
+
+    # v0.32.0 uses a FLAT schema for SQLite knobs — sqlitePath / sqliteOptions
+    # live directly under each database section (not nested under .sqlite).
+    database:
+      config:
+        type: sqlite
+        sqlitePath: "repository/database/configdb.db"
+        sqliteOptions: "_journal_mode=WAL&_busy_timeout=5000&_pragma=foreign_keys(1)"
+      runtime:
+        type: sqlite
+        sqlitePath: "repository/database/runtimedb.db"
+        sqliteOptions: "_journal_mode=WAL&_busy_timeout=5000&_pragma=foreign_keys(1)"
+      user:
+        type: sqlite
+        sqlitePath: "repository/database/userdb.db"
+        sqliteOptions: "_journal_mode=WAL&_busy_timeout=5000&_pragma=foreign_keys(1)"
+
+    cors:
+      allowedOrigins: []                  # REPLACE — list of allowed origins (e.g. https://your.host)
+
+    passkey:
+      allowedOrigins: []                  # REPLACE — usually same as cors.allowedOrigins
+
+    # Consent server (OpenFGC on :9090) — runs alongside Thunder in the same
+    # pod. Upstream defaults to Postgres; we override to SQLite to match the
+    # rest of the databases above. Use `enabled: false` if you don't need
+    # the consent flow.
+    consent:
+      enabled: true
+      database:
+        type: sqlite
+        sqlitePath: "repository/database/consentdb.db"
+        sqliteOptions: "_pragma=journal_mode(WAL)&_pragma=cache_size(-16000)"
+
+  # ---------------------------------------------------------------------
+  # Ingress (NGINX). REPLACE hostname + tlsSecretsName at install time.
+  # Disable and front Thunder with your own ingress / gateway if needed.
+  # ---------------------------------------------------------------------
+  ingress:
+    enabled: true
+    className: "nginx"
+    hostname: ""                          # REPLACE — e.g. thunder.example.com
+    tlsSecretsName: ""                    # REPLACE — e.g. a Secret produced by silver-certificates
+
+  # ---------------------------------------------------------------------
+  # Setup job. Runs the chart's built-in defaults, then this chart's
+  # bootstrap scripts wired below. At v0.32.0 the chart does NOT seed an
+  # admin user — the repo's 20-default-resources.sh creates one itself.
+  # ---------------------------------------------------------------------
+  setup:
+    enabled: true
+
+  # ---------------------------------------------------------------------
+  # Bootstrap wiring — hooks our ConfigMap (built by this umbrella chart
+  # from files/*.sh) into the upstream setup job. `files` is set so the
+  # chart's built-in defaults remain (Pattern 2 from the upstream README).
+  # ---------------------------------------------------------------------
+  bootstrap:
+    configMap:
+      name: "thunder-bootstrap"
+      files:
+        - 20-default-resources.sh
+        - 30-sample-resources.sh

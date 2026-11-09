@@ -1,0 +1,10 @@
+.DS_Store
+.git/
+.gitignore
+.idea/
+.vscode/
+*.tmproj
+*.swp
+*.bak
+# Do NOT add `*.tgz` or `charts/*.tgz` here — they would mask the
+# bundled subchart tarball that Helm reads at install time.
