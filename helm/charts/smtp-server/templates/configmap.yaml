@@ -71,6 +71,13 @@ data:
       check_recipient_access hash:/etc/postfix/recipient_access
       {{- end }}
       reject
+    {{- if .Values.postfix.submission.enabled }}
+
+    # Bind MAIL FROM to the raven-approved SASL login; $$ escapes Postfix macros.
+    smtpd_sender_login_maps = regexp:{ {/^(.+)$$/ $${1}} }
+    smtpd_sender_restrictions =
+      reject_authenticated_sender_login_mismatch
+    {{- end }}
 
     # --- Rate limits ---
     smtpd_client_connection_rate_limit = {{ .Values.postfix.rateLimits.connectionPerClient }}
