@@ -28,6 +28,10 @@ This is the third of four Pingmailer mail-plane charts. Install order:
   start && sleep infinity`).
 - A `Service` on port 25 (SMTP). Port 587 (submission, STARTTLS-enforced)
   is added when `postfix.submission.enabled=true` (the default).
+- When submission is enabled, `main.cf` sets `smtpd_sender_login_maps` (inline
+  `regexp`) and `smtpd_sender_restrictions = reject_authenticated_sender_login_mismatch`,
+  so an authenticated client can only use its own address in `MAIL FROM`.
+  Unauthenticated port-25 traffic and null senders (bounces) are unchanged.
 - A `PersistentVolumeClaim` for `/var/spool/postfix` — the mail queue
   must survive pod restarts so in-flight messages aren't dropped.
 - An optional TLS `Secret` mount: when `tlsSecret.name` is set, the chart
